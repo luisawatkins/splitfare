@@ -31,9 +31,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
     <html lang="en">
       <body className="min-h-screen bg-slate-950 text-slate-50 antialiased">
         <ServiceWorkerRegister />
-        <main className="flex min-h-screen items-center justify-center">
-          {props.children}
-        </main>
+        <main>{props.children}</main>
       </body>
     </html>
   );
