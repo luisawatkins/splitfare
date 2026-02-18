@@ -1,3 +1,5 @@
+import { PrivyLoginButton } from "@/components/auth/PrivyLoginButton";
+
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -42,12 +44,8 @@ export default function HomePage() {
               every expense is provable forever.
             </p>
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-              <button className="w-full max-w-xs rounded-full border-2 border-slate-900 bg-slate-950 px-8 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-50 shadow-[0_8px_0_0_rgba(15,23,42,1)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_0_0_rgba(15,23,42,1)] active:translate-y-1 active:shadow-[0_4px_0_0_rgba(15,23,42,1)]">
-                Join the waitlist
-              </button>
-              <button className="w-full max-w-xs rounded-full border border-slate-900 bg-[#ffe7f7] px-8 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 transition hover:bg-white">
-                View product deck
-              </button>
+              <PrivyLoginButton variant="primary" label="Join with social login" />
+              <PrivyLoginButton variant="secondary" label="Continue with wallet" />
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900/80">
               <span>Privy social login</span>
