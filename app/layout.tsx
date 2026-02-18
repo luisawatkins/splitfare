@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type React from "react";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import { PrivyProviderClient } from "@/components/auth/PrivyProviderClient";
 
 export const metadata: Metadata = {
   title: "SplitFare",
@@ -31,7 +32,9 @@ export default function RootLayout(props: { children: React.ReactNode }) {
     <html lang="en">
       <body className="min-h-screen bg-slate-950 text-slate-50 antialiased">
         <ServiceWorkerRegister />
-        <main>{props.children}</main>
+        <PrivyProviderClient>
+          <main>{props.children}</main>
+        </PrivyProviderClient>
       </body>
     </html>
   );
