@@ -23,6 +23,7 @@
       "@contracts/*": ["contracts/*"],
       "@supabase/*": ["supabase/*"]
     },
+    "types": ["vitest"],
     "plugins": [
       {
         "name": "next"
