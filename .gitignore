@@ -25,3 +25,16 @@ Thumbs.db
 # Misc
 coverage/
 dist/
+
+# Media (videos)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.flv
+
+# Foundry cache (contains sensitive values like private keys)
+contracts/cache/
+contracts/artifacts/
+contracts/broadcast/
