@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type React from "react";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { PrivyProviderClient } from "@/components/auth/PrivyProviderClient";
 
@@ -29,12 +30,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-950 text-slate-50 antialiased">
-        <ServiceWorkerRegister />
-        <PrivyProviderClient>
-          <main>{props.children}</main>
-        </PrivyProviderClient>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-background text-foreground antialiased">
+        <ThemeProvider>
+          <ServiceWorkerRegister />
+          <PrivyProviderClient>
+            <main>{props.children}</main>
+          </PrivyProviderClient>
+        </ThemeProvider>
       </body>
     </html>
   );
