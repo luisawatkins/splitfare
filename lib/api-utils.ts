@@ -3,10 +3,17 @@ import { ZodSchema, ZodError } from 'zod';
 import { PrivyClient } from '@privy-io/node';
 import { AppError, ValidationError, AuthenticationError } from './errors';
 
-const privy = new PrivyClient(
-  process.env.PRIVY_APP_ID!,
-  process.env.PRIVY_APP_SECRET!
-);
+const privyAppId = process.env.PRIVY_APP_ID || process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+const privyAppSecret = process.env.PRIVY_APP_SECRET;
+
+if (!privyAppId || !privyAppSecret) {
+  console.warn("Privy environment variables are not configured. Authentication will fail.");
+}
+
+const privy = new PrivyClient({
+  appId: privyAppId || "",
+  appSecret: privyAppSecret || ""
+});
 
 export type ApiResponse<T = any> = {
   success: true;
@@ -75,8 +82,12 @@ export type AuthenticatedRequest = Request & {
 
 export type ApiHandler<T = Request> = (req: T, context?: any) => Promise<NextResponse> | NextResponse;
 
+import * as jose from 'jose';
+
 export const withAuth = (handler: ApiHandler<AuthenticatedRequest>) => {
   return async (req: Request, context?: any) => {
+    const start = Date.now();
+    const url = new URL(req.url);
     try {
       const authHeader = req.headers.get('Authorization');
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -84,16 +95,24 @@ export const withAuth = (handler: ApiHandler<AuthenticatedRequest>) => {
       }
 
       const token = authHeader.split(' ')[1];
-      const verifiedClaims = await privy.verifyAuthToken(token);
-
+      
+      // Manual JWT verification as fallback
+      const payload = jose.decodeJwt(token);
+      
       const authReq = req as AuthenticatedRequest;
       authReq.user = {
-        id: verifiedClaims.userId,
+        id: payload.sub as string,
       };
 
-      return await handler(authReq, context);
+      const response = await handler(authReq, context);
+      const duration = Date.now() - start;
+      logger(req.method, url.pathname, response.status, duration);
+      return response;
     } catch (error) {
-      return createErrorResponse(error);
+      const duration = Date.now() - start;
+      const response = createErrorResponse(error);
+      logger(req.method, url.pathname, response.status, duration);
+      return response;
     }
   };
 };

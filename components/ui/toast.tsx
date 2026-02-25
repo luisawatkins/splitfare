@@ -1,3 +1,5 @@
+"use client";
+
 import * as RadixToast from "@radix-ui/react-toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { createContext, useContext, useState, useCallback } from "react";
