@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { PrivyProviderClient } from "@/components/auth/PrivyProviderClient";
+import { QueryProvider } from "@/components/providers/QueryProvider";
+import { ToastProvider } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "SplitFare",
@@ -17,6 +19,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "SplitFare"
+  },
+  other: {
+    "mobile-web-app-capable": "yes"
   }
 };
 
@@ -34,9 +39,13 @@ export default function RootLayout(props: { children: React.ReactNode }) {
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ThemeProvider>
           <ServiceWorkerRegister />
-          <PrivyProviderClient>
-            <main>{props.children}</main>
-          </PrivyProviderClient>
+          <QueryProvider>
+            <ToastProvider>
+              <PrivyProviderClient>
+                <main>{props.children}</main>
+              </PrivyProviderClient>
+            </ToastProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

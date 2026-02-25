@@ -12,6 +12,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@ensdomains/ensjs": "^4.2.2",
     "@privy-io/node": "^0.9.0",
     "@privy-io/react-auth": "^3.14.1",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -20,6 +21,8 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@storacha/client": "^2.0.7",
     "@supabase/supabase-js": "^2.49.1",
+    "@tanstack/react-query": "^5.90.21",
+    "@thenamespace/offchain-manager": "^1.0.11",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
     "class-variance-authority": "^0.7.1",
@@ -32,6 +35,7 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "tailwind-merge": "^3.5.0",
+    "viem": "^2.46.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {

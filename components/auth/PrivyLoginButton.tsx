@@ -1,6 +1,9 @@
  "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { apiClient } from "@/lib/api-client";
 
 type Props = {
   variant?: "primary" | "secondary";
@@ -8,7 +11,53 @@ type Props = {
 };
 
 export function PrivyLoginButton(props: Props) {
-  const { ready, authenticated, login, logout } = usePrivy();
+  const router = useRouter();
+  const { ready, authenticated, user, login, logout, getAccessToken } = usePrivy();
+
+  useEffect(() => {
+    if (ready && authenticated && user) {
+      const handleRedirect = async () => {
+        try {
+          const token = await getAccessToken();
+          if (token) {
+            apiClient.setToken(token);
+          }
+
+          try {
+            const me = await apiClient.users.me();
+            
+            if (me) {
+              if (!me.ens_name) {
+                router.push("/onboarding/ens");
+              } else {
+                router.push("/dashboard");
+              }
+            } else {
+              const wallet = user.wallet?.address;
+              const email = user.email?.address || `${user.id}@privy.com`;
+              
+              const userData = {
+                email: email,
+                name: user.id.slice(0, 8),
+                username: user.id.slice(0, 8),
+                wallet_address: wallet,
+              };
+
+              await apiClient.users.create(userData as any);
+              router.push("/onboarding/ens");
+            }
+          } catch (e: any) {
+            console.error("Profile check/creation failed:", e);
+            router.push("/onboarding/ens");
+          }
+        } catch (error) {
+          console.error("Redirect handler failed:", error);
+        }
+      };
+
+      handleRedirect();
+    }
+  }, [ready, authenticated, user, router, getAccessToken]);
 
   const label = props.label ?? (authenticated ? "Manage account" : "Join with Privy");
 

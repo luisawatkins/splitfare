@@ -16,6 +16,9 @@ class ApiClient {
 
   setToken(token: string) {
     this.token = token;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('api_token', token);
+    }
   }
 
   private async request<T>(
@@ -25,6 +28,11 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = new Headers(options.headers);
+
+    // Try to recover token from session storage if not present
+    if (!this.token && typeof window !== 'undefined') {
+      this.token = sessionStorage.getItem('api_token');
+    }
 
     if (this.token) {
       headers.set('Authorization', `Bearer ${this.token}`);
