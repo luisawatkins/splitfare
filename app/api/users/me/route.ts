@@ -1,11 +1,14 @@
 import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
+import { toDbUserId } from '@/lib/privy-utils';
 
 const handler = async (req: AuthenticatedRequest) => {
   try {
+    const dbId = toDbUserId(req.user.id);
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return createResponse({
-        id: req.user.id,
+        id: dbId,
         email: 'user@example.com',
         name: 'Mock User',
         username: 'mockuser',
@@ -15,7 +18,7 @@ const handler = async (req: AuthenticatedRequest) => {
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('*')
-      .eq('id', req.user.id)
+      .eq('id', dbId)
       .single();
 
     if (error || !user) {

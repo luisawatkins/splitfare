@@ -48,12 +48,20 @@ class ApiClient {
       headers,
     });
 
-    const result: ApiResponse<T> = await response.json();
+    let result: ApiResponse<T>;
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error(response.ok ? 'Invalid response from server' : `Request failed: ${response.status} ${response.statusText}`);
+    }
 
     if (!result.success) {
-      const error = new Error(result.error.message);
-      (error as any).code = result.error.code;
-      (error as any).details = result.error.details;
+      const message = 'error' in result ? result.error.message : 'An unexpected error occurred';
+      const error = new Error(message);
+      if ('error' in result) {
+        (error as any).code = result.error.code;
+        (error as any).details = result.error.details;
+      }
       (error as any).status = response.status;
       throw error;
     }
@@ -92,6 +100,18 @@ class ApiClient {
     updateStatus: (id: string, status: Settlement['status'], txHash?: string) =>
       this.request<Settlement>('PATCH', `/settlements/${id}`, { 
         body: JSON.stringify({ status, transaction_hash: txHash }) 
+      }),
+  };
+
+  ens = {
+    register: (subdomain: string, walletAddress: string, options?: { name: string; email?: string }) =>
+      this.request<{ ensName: string; registered: boolean }>('POST', '/ens/register', {
+        body: JSON.stringify({
+          subdomain,
+          wallet_address: walletAddress,
+          name: options?.name ?? '',
+          email: options?.email ?? '',
+        }),
       }),
   };
 }

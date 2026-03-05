@@ -1,6 +1,38 @@
+"use client";
+
 import { PrivyLoginButton } from "@/components/auth/PrivyLoginButton";
+import { usePrivy } from "@privy-io/react-auth";
+import { useRouter } from "next/navigation";
+import { apiClient } from "@/lib/api-client";
 
 export default function HomePage() {
+  const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const router = useRouter();
+
+  const goToApp = async () => {
+    if (!authenticated || !user) return;
+    try {
+      const token = await getAccessToken();
+      if (token) apiClient.setToken(token);
+      const me = await apiClient.users.me();
+      if (me) {
+        router.push(me.ens_name ? "/dashboard" : "/onboarding/ens");
+      } else {
+        const wallet = user.wallet?.address;
+        const email = user.email?.address || `${user.id}@privy.com`;
+        await apiClient.users.create({
+          email,
+          name: user.id.slice(0, 8),
+          username: `u_${user.id.replace(/[^a-zA-Z0-9]/g, "").slice(-12)}`,
+          wallet_address: wallet,
+        } as any);
+        router.push("/onboarding/ens");
+      }
+    } catch {
+      router.push("/onboarding/ens");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <header className="sticky top-0 z-20 border-b border-slate-900 bg-slate-950/80 backdrop-blur">
@@ -44,8 +76,31 @@ export default function HomePage() {
               every expense is provable forever.
             </p>
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
-              <PrivyLoginButton variant="primary" label="Join with social login" />
-              <PrivyLoginButton variant="secondary" label="Continue with wallet" />
+              {ready && authenticated ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={goToApp}
+                    className="w-full max-w-xs rounded-full border-2 border-slate-900 bg-slate-950 px-8 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-50 shadow-[0_8px_0_0_rgba(15,23,42,1)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_0_0_rgba(15,23,42,1)]"
+                  >
+                    Go to App
+                  </button>
+                  <PrivyLoginButton variant="secondary" label="Manage account" />
+                </>
+              ) : (
+                <>
+                  <PrivyLoginButton
+                    variant="primary"
+                    label="Join with social login"
+                    onLoginSuccess={goToApp}
+                  />
+                  <PrivyLoginButton
+                    variant="secondary"
+                    label="Continue with wallet"
+                    onLoginSuccess={goToApp}
+                  />
+                </>
+              )}
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900/80">
               <span>Privy social login</span>

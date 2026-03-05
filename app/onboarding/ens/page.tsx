@@ -1,21 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ENSInput } from '@/components/ens-input';
+import { Input } from '@/components/ui/input';
 import { useENS } from '@/hooks/useENS';
+import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Wallet, ShieldCheck, Zap, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { getPrivyProfile } from '@/lib/privy-profile';
 
 export default function ENSOnboardingPage() {
   const [validSubdomain, setValidSubdomain] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const { user } = usePrivy();
   const { register, isRegistering, estimateGas } = useENS();
   const [gasEstimate, setGasEstimate] = useState<string | null>(null);
   const router = useRouter();
   const { notify } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      const { name, email: userEmail } = getPrivyProfile(user);
+      setDisplayName((prev) => prev || name);
+      setEmail((prev) => prev || userEmail);
+    }
+  }, [user]);
 
   const handleSubdomainValid = async (name: string) => {
     setValidSubdomain(name);
@@ -32,7 +46,7 @@ export default function ENSOnboardingPage() {
   };
 
   const handleRegister = async () => {
-    if (!validSubdomain) return;
+    if (!validSubdomain || !displayName.trim()) return;
     
     try {
       notify({
@@ -40,7 +54,7 @@ export default function ENSOnboardingPage() {
         description: "Please sign the transaction in your wallet",
       });
       
-      await register(validSubdomain);
+      await register(validSubdomain, displayName.trim(), email.trim() || undefined);
       
       notify({
         title: "Registration successful!",
@@ -81,6 +95,33 @@ export default function ENSOnboardingPage() {
           <div className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-200">
+                Display name
+              </label>
+              <Input
+                placeholder="e.g. Alice"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="bg-slate-800 border-slate-700"
+              />
+              <p className="text-xs text-slate-500">How others will see you in groups</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200">
+                Email <span className="text-slate-500 font-normal">(optional)</span>
+              </label>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-slate-800 border-slate-700"
+              />
+              <p className="text-xs text-slate-500">For wallet-only users — helps with recovery</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200">
                 Choose a subdomain
               </label>
               <ENSInput onValidSubdomain={handleSubdomainValid} />
@@ -105,7 +146,7 @@ export default function ENSOnboardingPage() {
 
             <Button
               onClick={handleRegister}
-              disabled={!validSubdomain || isRegistering}
+              disabled={!validSubdomain || !displayName.trim() || isRegistering}
               className="w-full h-12 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-bold uppercase tracking-wider transition-all"
             >
               {isRegistering ? (

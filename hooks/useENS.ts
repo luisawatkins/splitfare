@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { checkAvailability, validateSubdomain, registerSubdomain } from '@/lib/ens';
+import { checkAvailability, validateSubdomain } from '@/lib/ens';
 import { useWallets, usePrivy } from '@privy-io/react-auth';
 import { apiClient } from '@/lib/api-client';
 
@@ -28,27 +28,17 @@ export function useENS() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (params: { subdomain: string; name: string; email?: string }) => {
       const wallet = wallets[0];
       if (!wallet) throw new Error('No wallet connected');
 
-      // Set the access token for the API client
       const token = await getAccessToken();
-      if (token) {
-        apiClient.setToken(token);
-      }
+      if (token) apiClient.setToken(token);
 
-      // Use Namespace API for off-chain registration
-      await registerSubdomain(name, wallet.address);
-      
-      // Update user record in database
-      const user = await apiClient.users.me();
-      if (!user?.id) throw new Error('User not found');
-      
-      await apiClient.users.update(user.id, { 
-        ens_name: `${name.toLowerCase()}.${process.env.NEXT_PUBLIC_ENS_DOMAIN || 'splitfare.eth'}` 
+      await apiClient.ens.register(params.subdomain, wallet.address, {
+        name: params.name,
+        email: params.email,
       });
-
       return true;
     },
   });
@@ -65,7 +55,8 @@ export function useENS() {
     isChecking,
     checkError,
     validation,
-    register: registerMutation.mutateAsync,
+    register: (subdomain: string, name: string, email?: string) =>
+      registerMutation.mutateAsync({ subdomain, name, email }),
     isRegistering: registerMutation.isPending,
     registerError: registerMutation.error,
     estimateGas,
