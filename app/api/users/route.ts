@@ -1,24 +1,26 @@
 import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { CreateUserSchema } from '@/lib/validations';
+import { toDbUserId } from '@/lib/privy-utils';
 
 const handler = async (req: AuthenticatedRequest & { validatedBody: any }) => {
   try {
     const { email, name, username, wallet_address } = req.validatedBody;
-    
+    const dbId = toDbUserId(req.user.id);
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return createResponse(req.validatedBody, 201);
     }
 
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .insert({
-        id: req.user.id,
+      .upsert({
+        id: dbId,
         email,
         name,
         username,
         wallet_address,
-      })
+      }, { onConflict: 'id' })
       .select()
       .single();
 
