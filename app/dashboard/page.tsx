@@ -11,8 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Settings, Bell, Search, Plus, Users, Receipt, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TabBar } from '@/components/ui/tab-bar';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { getAccessToken } = usePrivy();
   const { data: user, isLoading } = useQuery({
     queryKey: ['me'],
@@ -23,6 +26,11 @@ export default function DashboardPage() {
       }
       return apiClient.users.me();
     },
+  });
+
+  const { data: groups } = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => apiClient.groups.list(),
   });
 
   if (isLoading) {
@@ -92,13 +100,15 @@ export default function DashboardPage() {
         </Card>
 
         <div className="grid grid-cols-2 gap-4">
-          <Card className="p-4 flex flex-col items-center gap-2 border-slate-200 dark:border-slate-800">
-            <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <Users size={20} />
-            </div>
-            <span className="text-xs font-bold uppercase tracking-tighter opacity-60">Groups</span>
-            <span className="text-xl font-black">0</span>
-          </Card>
+          <Link href="/groups/create" className="block">
+            <Card className="p-4 flex flex-col items-center gap-2 border-slate-200 dark:border-slate-800 hover:bg-muted/50 transition-colors">
+              <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <Users size={20} />
+              </div>
+              <span className="text-xs font-bold uppercase tracking-tighter opacity-60">Groups</span>
+              <span className="text-xl font-black">{groups?.length || 0}</span>
+            </Card>
+          </Link>
           <Card className="p-4 flex flex-col items-center gap-2 border-slate-200 dark:border-slate-800">
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
               <Receipt size={20} />
@@ -117,7 +127,11 @@ export default function DashboardPage() {
           { key: "settings", label: "Settings", icon: <Settings size={20} /> },
         ]}
         activeKey="home"
-        onChange={() => {}}
+        onChange={(key) => {
+          if (key === "groups") {
+            router.push("/groups");
+          }
+        }}
       />
     </div>
   );

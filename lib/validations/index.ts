@@ -18,10 +18,22 @@ export const CreateUserSchema = UserSchema.omit({
   updated_at: true 
 });
 
+export const GroupCategoryEnum = z.enum([
+  'trip',
+  'household',
+  'event',
+  'project',
+  'other',
+]);
+
 export const GroupSchema = z.object({
   id: z.string().uuid().optional(),
-  name: z.string().min(1),
+  name: z.string().min(1, "Group name is required"),
   description: z.string().optional().nullable(),
+  category: GroupCategoryEnum.default('other'),
+  invite_code: z.string().min(8).max(8).optional(),
+  space_did: z.string().optional().nullable(),
+  avatar_url: z.string().optional().nullable(),
   currency: z.string().default('USDC'),
   created_by: z.string().uuid(),
   created_at: z.string().datetime().optional(),
@@ -30,6 +42,9 @@ export const GroupSchema = z.object({
 
 export const CreateGroupSchema = GroupSchema.omit({
   id: true,
+  created_by: true,
+  invite_code: true,
+  space_did: true,
   created_at: true,
   updated_at: true,
 });

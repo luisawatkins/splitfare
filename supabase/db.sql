@@ -5,7 +5,15 @@ create extension if not exists "pgcrypto";
 -- ENUMS
 -- =========================
 
-create type role as enum ('owner', 'member');
+create type role as enum ('owner', 'admin', 'member');
+
+create type group_category as enum (
+  'trip',
+  'household',
+  'event',
+  'project',
+  'other'
+);
 
 create type split_type as enum ('equal', 'percentage', 'shares', 'custom');
 
@@ -48,6 +56,10 @@ create table if not exists public.groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   description text,
+  category group_category not null default 'other',
+  invite_code text unique not null,
+  space_did text unique,
+  avatar_url text,
   currency text not null default 'USDC',
   created_by uuid not null references public.users(id) on delete restrict,
   created_at timestamptz not null default now(),
