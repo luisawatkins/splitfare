@@ -86,7 +86,7 @@ export function GroupForm() {
         variant: "success",
       });
 
-      router.push("/dashboard");
+      router.push(`/groups/${result.data.id}`);
     } catch (error) {
       console.error("Error creating group:", error);
       notify({

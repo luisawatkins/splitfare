@@ -51,7 +51,7 @@ export default function GroupsPage() {
       ) : (
         <div className="space-y-3">
           {groups.map((group) => (
-            <Link key={group.id} href={`/dashboard/groups/${group.id}`}>
+            <Link key={group.id} href={`/groups/${group.id}`}>
               <Card className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between group">
                 <div className="flex items-center space-x-4">
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
