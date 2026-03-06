@@ -6,9 +6,24 @@ import { apiClient } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { InviteShare } from "@/components/invite-share";
 import { MemberList } from "@/components/member-list";
-import { Loader2, ArrowLeft, Settings, Users, Receipt, Wallet } from "lucide-react";
+import { BalanceSummary } from "@/components/balance-summary";
+import { ActivityFeed } from "@/components/activity-feed";
+import { QuickActions } from "@/components/quick-actions";
+import { cn } from "@/lib/cn";
+import { 
+  Loader2, 
+  ArrowLeft, 
+  Settings, 
+  Users, 
+  Receipt, 
+  Wallet,
+  Calendar,
+  Image as ImageIcon,
+  History
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
@@ -19,16 +34,61 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
   const router = useRouter();
   const { user: privyUser } = usePrivy();
   const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
+  const [activeTab, setActiveTab] = useState("expenses");
 
-  const { data: group, isLoading, error } = useQuery({
+  const { data: group, isLoading: groupLoading, error } = useQuery({
     queryKey: ["group", id],
     queryFn: () => apiClient.groups.get(id),
   });
 
+  const { data: members, isLoading: membersLoading } = useQuery({
+    queryKey: ["group-members", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/groups/${id}/members`);
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to fetch members");
+      return result.data;
+    },
+  });
+
+  const isLoading = groupLoading || membersLoading;
+
+  const currentUserBalance = members?.find((m: any) => m.user.id === currentUserId)?.balance || 0;
+
+  const activities = [
+    {
+      id: "1",
+      type: "expense" as const,
+      content: "Alice added Dinner in SoHo",
+      timestamp: new Date().toISOString(),
+      user: { name: "Alice", avatar_url: null },
+      amount: 132.40,
+      currency: "USDC"
+    },
+    {
+      id: "2",
+      type: "join" as const,
+      content: "Bob joined the group",
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      user: { name: "Bob", avatar_url: null }
+    }
+  ];
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col bg-background">
+        <header className="h-16 border-b flex items-center px-4 gap-3">
+          <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
+          <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+        </header>
+        <main className="p-4 space-y-6">
+          <div className="h-48 w-full bg-muted animate-pulse rounded-3xl" />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="h-20 bg-muted animate-pulse rounded-2xl" />
+            <div className="h-20 bg-muted animate-pulse rounded-2xl" />
+            <div className="h-20 bg-muted animate-pulse rounded-2xl" />
+          </div>
+        </main>
       </div>
     );
   }
@@ -45,8 +105,15 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
     );
   }
 
+  const tabs = [
+    { id: "expenses", label: "Expenses", icon: <Receipt size={16} /> },
+    { id: "balances", label: "Balances", icon: <History size={16} /> },
+    { id: "settle", label: "Settle", icon: <Wallet size={16} /> },
+    { id: "media", label: "Media", icon: <ImageIcon size={16} /> },
+  ];
+
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-32">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
@@ -54,71 +121,77 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
               <ArrowLeft size={20} />
             </Link>
           </Button>
-          <h1 className="text-sm font-bold tracking-tight">{group.name}</h1>
+          <div className="flex flex-col">
+            <h1 className="text-sm font-black uppercase tracking-tighter">{group.name}</h1>
+            <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{group.category}</span>
+          </div>
         </div>
-        <Button variant="ghost" size="icon">
-          <Settings size={20} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex -space-x-2">
+            {[1, 2, 3].map((i) => (
+              <Avatar key={i} className="h-7 w-7 border-2 border-background ring-1 ring-border" fallback="U" />
+            ))}
+          </div>
+          <Button variant="ghost" size="icon">
+            <Settings size={20} />
+          </Button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-2xl p-4 space-y-6">
-        <Card className="p-6 bg-primary text-primary-foreground border-none shadow-xl overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Users size={120} />
-          </div>
-          <div className="relative z-10 space-y-4">
-            <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="bg-white/20 text-white border-none uppercase text-[10px]">
-                {group.category}
-              </Badge>
-              <div className="flex items-center text-xs font-medium opacity-80">
-                <Wallet className="h-3 w-3 mr-1" />
-                {group.currency}
-              </div>
-            </div>
-            <div>
-              <h2 className="text-3xl font-black">{group.name}</h2>
-              {group.description && (
-                <p className="text-sm opacity-80 mt-1 line-clamp-2">{group.description}</p>
-              )}
-            </div>
-            <div className="pt-2 flex gap-2">
-              <Button className="flex-1 bg-white text-primary hover:bg-white/90 border-none rounded-xl h-11 font-bold">
-                Add Expense
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="p-4 flex flex-col items-center gap-2 border-border/50 bg-card/50">
-            <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <Receipt size={20} />
-            </div>
-            <span className="text-xs font-bold uppercase tracking-tighter opacity-60">Total Spent</span>
-            <span className="text-xl font-black">$0.00</span>
-          </Card>
-          <Card className="p-4 flex flex-col items-center gap-2 border-border/50 bg-card/50">
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <Users size={20} />
-            </div>
-            <span className="text-xs font-bold uppercase tracking-tighter opacity-60">Members</span>
-            <span className="text-xl font-black">1</span>
-          </Card>
-        </div>
-
-        {group.invite_code && (
-          <InviteShare inviteCode={group.invite_code} groupName={group.name} />
-        )}
-
-        <MemberList groupId={id} currentUserId={currentUserId} />
+        <BalanceSummary netBalance={currentUserBalance} currency={group.currency} />
+        
+        <QuickActions groupId={id} />
 
         <div className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider opacity-60 px-1">Recent Activity</h3>
-          <Card className="p-8 text-center border-dashed bg-muted/30">
-            <p className="text-sm text-muted-foreground">No expenses yet. Start by adding one!</p>
-          </Card>
+          <div className="flex bg-muted/50 p-1 rounded-2xl overflow-x-auto no-scrollbar">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all duration-300 flex-1 whitespace-nowrap",
+                  activeTab === tab.id 
+                    ? "bg-white dark:bg-slate-800 text-primary shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-6">
+            {activeTab === "expenses" && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <ActivityFeed activities={activities} />
+              </div>
+            )}
+            {activeTab === "balances" && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <MemberList groupId={id} currentUserId={currentUserId} />
+              </div>
+            )}
+            {activeTab === "settle" && (
+              <Card className="p-12 text-center border-dashed bg-muted/30 rounded-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <p className="text-sm text-muted-foreground font-medium italic">Settle up your debts here. Feature coming soon!</p>
+              </Card>
+            )}
+            {activeTab === "media" && (
+              <Card className="p-12 text-center border-dashed bg-muted/30 rounded-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <p className="text-sm text-muted-foreground font-medium italic">Shared media and documents. Feature coming soon!</p>
+              </Card>
+            )}
+          </div>
         </div>
+
+        {/* Invite Sharing */}
+        {group.invite_code && (
+          <div className="pt-4">
+            <InviteShare inviteCode={group.invite_code} groupName={group.name} />
+          </div>
+        )}
       </main>
     </div>
   );
