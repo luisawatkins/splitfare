@@ -7,13 +7,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InviteShare } from "@/components/invite-share";
+import { MemberList } from "@/components/member-list";
 import { Loader2, ArrowLeft, Settings, Users, Receipt, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
+import { toDbUserId } from "@/lib/privy-utils";
 
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const router = useRouter();
+  const { user: privyUser } = usePrivy();
+  const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
 
   const { data: group, isLoading, error } = useQuery({
     queryKey: ["group", id],
@@ -105,6 +110,8 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
         {group.invite_code && (
           <InviteShare inviteCode={group.invite_code} groupName={group.name} />
         )}
+
+        <MemberList groupId={id} currentUserId={currentUserId} />
 
         <div className="space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider opacity-60 px-1">Recent Activity</h3>
