@@ -1,12 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, Shield, Crown, User, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { MemberActions } from "./member-actions";
 import { cn } from "@/lib/cn";
+import { useToast } from "@/components/ui/toast";
 
 type Member = {
   id: string;
@@ -29,6 +30,9 @@ type MemberListProps = {
 };
 
 export function MemberList({ groupId, currentUserId }: MemberListProps) {
+  const queryClient = useQueryClient();
+  const { notify } = useToast();
+
   const { data: members, isLoading, refetch } = useQuery<Member[]>({
     queryKey: ["group-members", groupId],
     queryFn: async () => {
@@ -36,6 +40,56 @@ export function MemberList({ groupId, currentUserId }: MemberListProps) {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to fetch members");
       return result.data;
+    },
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ userId, role, action }: { userId: string; role?: string; action: 'update' | 'remove' }) => {
+      const method = action === 'update' ? 'PATCH' : 'DELETE';
+      const body = action === 'update' ? JSON.stringify({ role }) : undefined;
+      
+      const res = await fetch(`/api/groups/${groupId}/members/${userId}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.error || `Failed to ${action} member`);
+      }
+      return true;
+    },
+    onMutate: async ({ userId, role, action }) => {
+      await queryClient.cancelQueries({ queryKey: ["group-members", groupId] });
+      const previousMembers = queryClient.getQueryData<Member[]>(["group-members", groupId]);
+
+      if (previousMembers) {
+        if (action === 'remove') {
+          queryClient.setQueryData<Member[]>(["group-members", groupId], 
+            previousMembers.filter(m => m.user.id !== userId)
+          );
+        } else if (action === 'update' && role) {
+          queryClient.setQueryData<Member[]>(["group-members", groupId], 
+            previousMembers.map(m => m.user.id === userId ? { ...m, role: role as any } : m)
+          );
+        }
+      }
+
+      return { previousMembers };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousMembers) {
+        queryClient.setQueryData(["group-members", groupId], context.previousMembers);
+      }
+      notify({
+        title: "Error",
+        description: err.message,
+        variant: "error",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
     },
   });
 
@@ -49,6 +103,14 @@ export function MemberList({ groupId, currentUserId }: MemberListProps) {
 
   const currentUserMembership = members?.find(m => m.user.id === currentUserId);
   const currentUserRole = currentUserMembership?.role || 'member';
+
+  const handleUpdate = (userId: string, role: string) => {
+    updateMemberMutation.mutate({ userId, role, action: 'update' });
+  };
+
+  const handleRemove = (userId: string) => {
+    updateMemberMutation.mutate({ userId, action: 'remove' });
+  };
 
   return (
     <div className="space-y-4">
@@ -125,6 +187,8 @@ export function MemberList({ groupId, currentUserId }: MemberListProps) {
               currentUserRole={currentUserRole}
               currentUserId={currentUserId}
               onUpdate={refetch}
+              onOptimisticUpdate={handleUpdate}
+              onOptimisticRemove={handleRemove}
             />
           </Card>
         ))}

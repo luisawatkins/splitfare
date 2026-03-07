@@ -6,6 +6,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { PrivyProviderClient } from "@/components/auth/PrivyProviderClient";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ToastProvider } from "@/components/ui/toast";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export const metadata: Metadata = {
   title: "SplitFare",
@@ -42,7 +43,9 @@ export default function RootLayout(props: { children: React.ReactNode }) {
           <QueryProvider>
             <ToastProvider>
               <PrivyProviderClient>
-                <main>{props.children}</main>
+                <ErrorBoundary>
+                  <main>{props.children}</main>
+                </ErrorBoundary>
               </PrivyProviderClient>
             </ToastProvider>
           </QueryProvider>
