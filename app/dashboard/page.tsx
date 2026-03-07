@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { usePrivy } from '@privy-io/react-auth';
-import { apiClient } from '@/lib/api-client';
-import { displayUserIdentity } from '@/lib/ens';
-import { Card } from '@/components/ui/card';
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Settings, Bell, Search, Plus, Users, Receipt, Home } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { TabBar } from '@/components/ui/tab-bar';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { usePrivy } from "@privy-io/react-auth";
+import { toDbUserId } from "@/lib/privy-utils";
+import { GroupCard } from "@/components/group-card";
+import { BalanceSummary } from "@/components/balance-summary";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Plus, Users, Receipt, Search, Bell, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Avatar } from "@/components/ui/avatar";
+import { motion } from "framer-motion";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { getAccessToken } = usePrivy();
-  const { data: user, isLoading } = useQuery({
+  const { user: privyUser, getAccessToken } = usePrivy();
+  const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
+
+  const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['me'],
     queryFn: async () => {
       const token = await getAccessToken();
@@ -28,111 +28,122 @@ export default function DashboardPage() {
     },
   });
 
-  const { data: groups } = useQuery({
-    queryKey: ['groups'],
-    queryFn: () => apiClient.groups.list(),
+  const { data: members, isLoading: membersLoading } = useQuery({
+    queryKey: ["all-memberships"],
+    queryFn: async () => {
+      const groups = await apiClient.groups.list();
+      const memberships = await Promise.all(
+        groups.map(async (group) => {
+          const res = await fetch(`/api/groups/${group.id}/members`);
+          const result = await res.json();
+          const userMembership = result.data.find((m: any) => m.user.id === currentUserId);
+          return {
+            group,
+            balance: userMembership?.balance || 0,
+            memberCount: result.data.length
+          };
+        })
+      );
+      return memberships;
+    },
+    enabled: !!currentUserId
   });
+
+  const isLoading = userLoading || membersLoading;
+
+  const totalBalance = members?.reduce((sum, m) => sum + m.balance, 0) || 0;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="container max-w-2xl py-8 space-y-6">
+        <div className="h-8 w-48 bg-muted animate-pulse rounded-2xl" />
+        <div className="h-48 w-full bg-muted animate-pulse rounded-3xl" />
+        <div className="space-y-3 pt-6">
+          <div className="h-4 w-32 bg-muted animate-pulse rounded-lg" />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 w-full bg-muted animate-pulse rounded-3xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  const identity = user ? displayUserIdentity(user) : 'Guest';
-
   return (
-    <div className="min-h-screen bg-background pb-24 text-foreground">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md">
+    <div className="container max-w-2xl py-8 space-y-8 min-h-screen">
+      <header className="flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
           <Avatar 
             src={user?.avatar_url || undefined} 
-            fallback={identity ? identity.slice(0, 2).toUpperCase() : 'GS'} 
+            fallback={user?.name?.slice(0, 2).toUpperCase() || "SF"} 
+            className="h-10 w-10 border-2 border-primary/20 shadow-lg shadow-primary/10"
           />
           <div className="flex flex-col">
-            <h1 className="text-sm font-bold tracking-tight">{identity}</h1>
-            {user?.ens_name && (
-              <Badge variant="secondary" className="w-fit h-4 text-[10px] px-1 py-0">
-                ENS Verified
-              </Badge>
-            )}
+            <h1 className="text-sm font-black tracking-tighter uppercase opacity-40">Good Morning,</h1>
+            <span className="text-xl font-black tracking-tighter leading-tight uppercase">{user?.name}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Bell size={20} />
+          <Button variant="ghost" size="icon" className="rounded-2xl bg-muted/50 hover:bg-muted transition-all active:scale-90">
+            <Search size={20} className="stroke-[2.5]" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <Settings size={20} />
+          <Button variant="ghost" size="icon" className="relative rounded-2xl bg-muted/50 hover:bg-muted transition-all active:scale-90">
+            <Bell size={20} className="stroke-[2.5]" />
+            <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-rose-500 border-2 border-background ring-1 ring-rose-500/20" />
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl space-y-6 p-4">
-        <section className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-            <input 
-              placeholder="Search expenses..." 
-              className="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-2xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
-            />
-          </div>
-        </section>
+      <BalanceSummary netBalance={totalBalance} currency="USDC" />
 
-        <Card className="p-6 bg-yellow-400 text-slate-950 border-none shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-bold uppercase tracking-wider opacity-70">Total Balance</p>
-            <div className="bg-slate-950/10 p-2 rounded-xl">
-              <Receipt size={20} />
-            </div>
-          </div>
-          <h2 className="text-4xl font-black">$0.00</h2>
-          <div className="mt-6 flex gap-2">
-            <Button className="flex-1 bg-slate-950 text-white hover:bg-slate-800 border-none rounded-xl h-11">
-              Settle Up
+      <section className="space-y-4 pt-4">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-sm font-black uppercase tracking-widest opacity-40">Your Groups</h3>
+          <Link href="/groups/create">
+            <Button variant="ghost" size="sm" className="text-xs font-black uppercase tracking-tighter text-primary hover:bg-primary/10 rounded-xl">
+              <Plus size={16} className="mr-1 stroke-[3]" />
+              New Group
             </Button>
-            <Button size="icon" className="h-11 w-11 bg-slate-950 text-white hover:bg-slate-800 border-none rounded-xl">
-              <Plus />
-            </Button>
-          </div>
-        </Card>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Link href="/groups/create" className="block">
-            <Card className="p-4 flex flex-col items-center gap-2 border-slate-200 dark:border-slate-800 hover:bg-muted/50 transition-colors">
-              <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <Users size={20} />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-tighter opacity-60">Groups</span>
-              <span className="text-xl font-black">{groups?.length || 0}</span>
-            </Card>
           </Link>
-          <Card className="p-4 flex flex-col items-center gap-2 border-slate-200 dark:border-slate-800">
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <Receipt size={20} />
-            </div>
-            <span className="text-xs font-bold uppercase tracking-tighter opacity-60">Expenses</span>
-            <span className="text-xl font-black">0</span>
-          </Card>
         </div>
-      </main>
 
-      <TabBar 
-        items={[
-          { key: "home", label: "Home", icon: <Home size={20} /> },
-          { key: "groups", label: "Groups", icon: <Users size={20} /> },
-          { key: "expenses", label: "Expenses", icon: <Receipt size={20} /> },
-          { key: "settings", label: "Settings", icon: <Settings size={20} /> },
-        ]}
-        activeKey="home"
-        onChange={(key) => {
-          if (key === "groups") {
-            router.push("/groups");
-          }
-        }}
-      />
+        {!members || members.length === 0 ? (
+          <EmptyState
+            icon={<Users className="h-12 w-12 stroke-[2.5]" />}
+            title="No Groups Found"
+            description="Start by creating a group to split expenses with your friends."
+            actionLabel="Create Group"
+            onActionClick={() => (window.location.href = "/groups/create")}
+            className="py-12 bg-muted/20 border-border/50 rounded-3xl"
+          />
+        ) : (
+          <div className="space-y-3">
+            {members.map((m, index) => (
+              <motion.div
+                key={m.group.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <GroupCard
+                  id={m.group.id}
+                  name={m.group.name}
+                  category={m.group.category}
+                  memberCount={m.memberCount}
+                  userBalance={m.balance}
+                  currency={m.group.currency}
+                  avatarUrl={m.group.avatar_url}
+                />
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <Link href="/groups/create" className="md:hidden fixed bottom-24 right-6 z-50">
+        <Button className="h-16 w-16 rounded-full bg-primary shadow-2xl shadow-primary/40 active:scale-90 transition-all duration-300">
+          <Plus size={32} className="stroke-[3]" />
+        </Button>
+      </Link>
     </div>
   );
 }
