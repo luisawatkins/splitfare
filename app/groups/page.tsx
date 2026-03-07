@@ -9,6 +9,7 @@ import { Plus, Users, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { GroupListSkeleton } from "@/components/loading-states/group-loading";
 
 export default function GroupsPage() {
   const router = useRouter();
@@ -21,9 +22,7 @@ export default function GroupsPage() {
     return (
       <div className="container max-w-2xl py-8 space-y-4">
         <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="p-4 h-20 animate-pulse bg-muted/50" />
-        ))}
+        <GroupListSkeleton count={4} />
       </div>
     );
   }

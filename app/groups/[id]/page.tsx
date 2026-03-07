@@ -28,6 +28,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { toDbUserId } from "@/lib/privy-utils";
+import { GroupDetailsSkeleton } from "@/components/loading-states/group-loading";
 
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -75,22 +76,7 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
   ];
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <header className="h-16 border-b flex items-center px-4 gap-3">
-          <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
-          <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-        </header>
-        <main className="p-4 space-y-6">
-          <div className="h-48 w-full bg-muted animate-pulse rounded-3xl" />
-          <div className="grid grid-cols-3 gap-3">
-            <div className="h-20 bg-muted animate-pulse rounded-2xl" />
-            <div className="h-20 bg-muted animate-pulse rounded-2xl" />
-            <div className="h-20 bg-muted animate-pulse rounded-2xl" />
-          </div>
-        </main>
-      </div>
-    );
+    return <GroupDetailsSkeleton />;
   }
 
   if (error || !group) {
@@ -186,7 +172,6 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
           </div>
         </div>
 
-        {/* Invite Sharing */}
         {group.invite_code && (
           <div className="pt-4">
             <InviteShare inviteCode={group.invite_code} groupName={group.name} />

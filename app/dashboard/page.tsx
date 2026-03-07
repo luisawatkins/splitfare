@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { motion } from "framer-motion";
+import { GroupListSkeleton } from "@/components/loading-states/group-loading";
 
 export default function DashboardPage() {
   const { user: privyUser, getAccessToken } = usePrivy();
@@ -56,13 +57,14 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="container max-w-2xl py-8 space-y-6">
-        <div className="h-8 w-48 bg-muted animate-pulse rounded-2xl" />
+        <div className="h-10 w-48 bg-muted animate-pulse rounded-2xl" />
         <div className="h-48 w-full bg-muted animate-pulse rounded-3xl" />
-        <div className="space-y-3 pt-6">
-          <div className="h-4 w-32 bg-muted animate-pulse rounded-lg" />
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 w-full bg-muted animate-pulse rounded-3xl" />
-          ))}
+        <div className="space-y-4 pt-4">
+          <div className="flex justify-between items-center px-1">
+            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+            <div className="h-8 w-24 bg-muted animate-pulse rounded-xl" />
+          </div>
+          <GroupListSkeleton count={3} />
         </div>
       </div>
     );
@@ -130,7 +132,7 @@ export default function DashboardPage() {
                   category={m.group.category}
                   memberCount={m.memberCount}
                   userBalance={m.balance}
-                  currency={m.group.currency}
+                  currency={m.group.currency || "USDC"}
                   avatarUrl={m.group.avatar_url}
                 />
               </motion.div>
