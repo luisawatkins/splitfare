@@ -1,6 +1,7 @@
 import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
+import { calculateBalances } from '@/lib/calculations';
 
 const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
   try {
@@ -18,7 +19,6 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
       return createResponse({ error: 'Unauthorized' }, 403);
     }
 
-    // 2. Fetch all members with their profiles
     const { data: members, error: membersError } = await supabaseAdmin
       .from('group_members')
       .select(`
@@ -67,35 +67,11 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
       return createResponse({ error: 'Failed to fetch balances' }, 500);
     }
 
-    const balances: Record<string, number> = {};
-    
-    members.forEach(m => {
-      const user = m.user as any;
-      if (user?.id) balances[user.id] = 0;
-    });
-
-    expenses?.forEach(expense => {
-      const creatorId = expense.created_by;
-      
-      if (balances[creatorId] !== undefined) {
-        balances[creatorId] += Number(expense.total_amount);
-      }
-
-      expense.splits?.forEach(split => {
-        if (balances[split.user_id] !== undefined) {
-          balances[split.user_id] -= Number(split.amount_owed);
-        }
-      });
-    });
-
-    settlements?.forEach(settlement => {
-      if (balances[settlement.payer_id] !== undefined) {
-        balances[settlement.payer_id] += Number(settlement.amount);
-      }
-      if (balances[settlement.payee_id] !== undefined) {
-        balances[settlement.payee_id] -= Number(settlement.amount);
-      }
-    });
+    const balances = calculateBalances(
+      members as any[],
+      expenses as any[],
+      settlements as any[]
+    );
 
     const membersWithBalances = members.map(m => {
       const user = m.user as any;
