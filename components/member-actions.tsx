@@ -28,6 +28,8 @@ type MemberActionsProps = {
   currentUserRole: string;
   currentUserId: string;
   onUpdate: () => void;
+  onOptimisticUpdate?: (userId: string, role: string) => void;
+  onOptimisticRemove?: (userId: string) => void;
 };
 
 export function MemberActions({ 
@@ -35,7 +37,9 @@ export function MemberActions({
   member, 
   currentUserRole, 
   currentUserId,
-  onUpdate 
+  onUpdate,
+  onOptimisticUpdate,
+  onOptimisticRemove
 }: MemberActionsProps) {
   const router = useRouter();
   const { notify } = useToast();
@@ -49,6 +53,12 @@ export function MemberActions({
   const isSelf = member.user.id === currentUserId;
 
   const handleUpdateRole = async (newRole: string) => {
+    if (onOptimisticUpdate) {
+      onOptimisticUpdate(member.user.id, newRole);
+      setIsPromoteModalOpen(false);
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/groups/${groupId}/members/${member.user.id}`, {
@@ -78,6 +88,12 @@ export function MemberActions({
   };
 
   const handleRemoveMember = async () => {
+    if (onOptimisticRemove) {
+      onOptimisticRemove(member.user.id);
+      setIsRemoveModalOpen(false);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/groups/${groupId}/members/${member.user.id}`, {
@@ -181,7 +197,6 @@ export function MemberActions({
 
   return (
     <div className="flex items-center gap-1">
-      {/* Promote to Admin (Owner only) */}
       {isOwner && member.role === 'member' && (
         <Button 
           variant="ghost" 
@@ -193,7 +208,6 @@ export function MemberActions({
         </Button>
       )}
 
-      {/* Remove from Group (Owner or Admin) */}
       {(isOwner || (isAdmin && member.role === 'member')) && (
         <Button 
           variant="ghost" 
