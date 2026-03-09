@@ -13,7 +13,7 @@ import { StepReceipt } from "@/components/expense-form/step-receipt";
 import { StepReview } from "@/components/expense-form/step-review";
 import { ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toDbUserId } from "@/lib/privy-utils";
 import { usePrivy } from "@privy-io/react-auth";
 
@@ -29,6 +29,7 @@ export default function CreateExpensePage() {
   const { id: groupId } = useParams();
   const [currentStep, setCurrentStep] = useState(0);
   const { notify } = useToast();
+  const queryClient = useQueryClient();
   const { user: privyUser, getAccessToken } = usePrivy();
   const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
 
@@ -95,16 +96,57 @@ export default function CreateExpensePage() {
     try {
       console.log("Submitting expense:", data);
       triggerHaptic();
+
+      const token = await getAccessToken();
+      
+      const splits = data.members
+        .filter(m => m.involved)
+        .map(m => ({
+          userId: m.userId,
+          amount: m.amount || 0,
+          percentage: m.percentage,
+          shares: m.shares,
+        }));
+
+      const res = await fetch(`/api/groups/${groupId}/expenses`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          description: data.description,
+          amount: data.amount,
+          date: data.date.toISOString(),
+          category: data.category,
+          paidById: data.paidById,
+          splitType: data.splitType,
+          splits: splits,
+          receiptCid: data.receiptCid,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to create expense");
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["expenses", groupId] });
+      await queryClient.invalidateQueries({ queryKey: ["group", groupId] });
+      await queryClient.invalidateQueries({ queryKey: ["group-members", groupId] });
+
       notify({
         title: "Success",
         description: "Expense created successfully!",
         variant: "success",
       });
       router.push(`/groups/${groupId}`);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Expense creation error:", error);
       notify({
         title: "Error",
-        description: "Failed to create expense. Please try again.",
+        description: error.message || "Failed to create expense. Please try again.",
         variant: "error",
       });
     }
