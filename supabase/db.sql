@@ -1,188 +1,110 @@
--- Needed for gen_random_uuid()
-create extension if not exists "pgcrypto";
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- =========================
--- ENUMS
--- =========================
-
-create type role as enum ('owner', 'admin', 'member');
-
-create type group_category as enum (
-  'trip',
-  'household',
-  'event',
-  'project',
-  'other'
-);
-
-create type split_type as enum ('equal', 'percentage', 'shares', 'custom');
-
-create type settlement_status as enum ('pending', 'completed', 'failed');
-
-create type expense_category as enum (
-  'travel',
-  'food',
-  'accommodation',
-  'transport',
-  'subscription',
-  'other'
-);
-
--- =========================
--- USERS (already have, included here for reference)
--- =========================
--- If you already created this table, skip this block.
-
-create table if not exists public.users (
-  id uuid primary key default gen_random_uuid(),
-  email text unique not null,
-  name text not null,
-  username text unique not null,
-  ens_name text unique,
-  wallet_address text unique,
-  avatar_url text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
--- Helpful index if you frequently look users up by ENS
-create index if not exists users_ens_name_idx on public.users (ens_name);
-
--- =========================
--- GROUPS
--- =========================
-
-create table if not exists public.groups (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  description text,
-  category group_category not null default 'other',
-  invite_code text unique not null,
-  space_did text unique,
-  avatar_url text,
-  currency text not null default 'USDC',
-  created_by uuid not null references public.users(id) on delete restrict,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists groups_created_by_idx on public.groups (created_by);
-
--- =========================
--- GROUP MEMBERS
--- =========================
-
-create table if not exists public.group_members (
-  id uuid primary key default gen_random_uuid(),
-  group_id uuid not null references public.groups(id) on delete cascade,
-  user_id uuid not null references public.users(id) on delete cascade,
-  role role not null default 'member',
-  joined_at timestamptz not null default now()
-);
-
--- A user can only appear once per group
-create unique index if not exists group_members_group_user_unique
-  on public.group_members (group_id, user_id);
-
-create index if not exists group_members_user_idx on public.group_members (user_id);
-
--- =========================
--- EXPENSES
--- =========================
-
-create table if not exists public.expenses (
-  id uuid primary key default gen_random_uuid(),
-  group_id uuid not null references public.groups(id) on delete cascade,
-  created_by uuid not null references public.users(id) on delete restrict,
-  description text not null,
-  total_amount numeric(18,6) not null,
-  currency text not null default 'USDC',
-  category expense_category,
-  split_type split_type not null default 'equal',
-  external_tx_hash text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists expenses_group_id_idx on public.expenses (group_id);
-create index if not exists expenses_created_by_idx on public.expenses (created_by);
-create index if not exists expenses_category_idx on public.expenses (category);
-
--- =========================
--- EXPENSE SPLITS
--- =========================
-
-create table if not exists public.expense_splits (
-  id uuid primary key default gen_random_uuid(),
-  expense_id uuid not null references public.expenses(id) on delete cascade,
-  user_id uuid not null references public.users(id) on delete cascade,
-
-  -- For 'equal' splits, amount_owed is computed but stored.
-  -- For 'percentage', percentage_owed is set and amount_owed can be derived.
-  -- For 'shares', shares is set; app can compute based on total_amount.
-  amount_owed numeric(18,6) not null,
-  percentage_owed numeric(5,2),
-  shares integer,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists expense_splits_expense_idx on public.expense_splits (expense_id);
-create index if not exists expense_splits_user_idx on public.expense_splits (user_id);
-
--- =========================
--- SETTLEMENTS
--- =========================
-
-create table if not exists public.settlements (
-  id uuid primary key default gen_random_uuid(),
-  group_id uuid not null references public.groups(id) on delete cascade,
-  payer_id uuid not null references public.users(id) on delete restrict,
-  payee_id uuid not null references public.users(id) on delete restrict,
-  amount numeric(18,6) not null,
-  currency text not null default 'USDC',
-  status settlement_status not null default 'pending',
-  tx_hash text,
-  chain text, -- e.g. "base", "optimism", etc.
-  manifest_cid text, -- Storacha settlement manifest CID
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists settlements_group_idx on public.settlements (group_id);
-create index if not exists settlements_payer_idx on public.settlements (payer_id);
-create index if not exists settlements_payee_idx on public.settlements (payee_id);
-create index if not exists settlements_status_idx on public.settlements (status);
-
--- =========================
--- CID ANCHORS (group history CAR roots)
--- =========================
-
-create table if not exists public.cid_anchors (
-  id uuid primary key default gen_random_uuid(),
-  group_id uuid not null references public.groups(id) on delete cascade,
-  root_cid text not null,
+CREATE TABLE public.cid_anchors (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL,
+  root_cid text NOT NULL,
   car_cid text,
   anchor_tx_hash text,
-  anchored_at timestamptz not null default now()
+  anchored_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT cid_anchors_pkey PRIMARY KEY (id),
+  CONSTRAINT cid_anchors_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id)
 );
-
-create index if not exists cid_anchors_group_idx on public.cid_anchors (group_id);
-
--- =========================
--- SHARED MEDIA
--- =========================
-
-create table if not exists public.shared_media (
-  id uuid primary key default gen_random_uuid(),
-  group_id uuid not null references public.groups(id) on delete cascade,
-  expense_id uuid references public.expenses(id) on delete set null,
-  uploader_id uuid not null references public.users(id) on delete restrict,
-  cid text not null,            -- Storacha CID
-  media_type text not null,     -- 'image', 'pdf', etc.
+CREATE TABLE public.expense_splits (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  expense_id uuid NOT NULL,
+  user_id text NOT NULL,
+  amount_owed numeric NOT NULL,
+  percentage_owed numeric,
+  shares integer,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT expense_splits_pkey PRIMARY KEY (id),
+  CONSTRAINT expense_splits_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expenses(id),
+  CONSTRAINT expense_splits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.expenses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL,
+  created_by text NOT NULL,
+  description text NOT NULL,
+  total_amount numeric NOT NULL,
+  currency text NOT NULL DEFAULT 'USDC'::text,
+  category USER-DEFINED,
+  split_type USER-DEFINED NOT NULL DEFAULT 'equal'::split_type,
+  external_tx_hash text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT expenses_pkey PRIMARY KEY (id),
+  CONSTRAINT expenses_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT expenses_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.group_members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL,
+  user_id text NOT NULL,
+  role USER-DEFINED NOT NULL DEFAULT 'member'::role,
+  joined_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT group_members_pkey PRIMARY KEY (id),
+  CONSTRAINT group_members_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT group_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.groups (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  currency text NOT NULL DEFAULT 'USDC'::text,
+  created_by text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  category USER-DEFINED NOT NULL DEFAULT 'other'::group_category,
+  space_did text UNIQUE,
+  avatar_url text,
+  invite_code text NOT NULL UNIQUE,
+  CONSTRAINT groups_pkey PRIMARY KEY (id),
+  CONSTRAINT groups_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.settlements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL,
+  payer_id text NOT NULL,
+  payee_id text NOT NULL,
+  amount numeric NOT NULL,
+  currency text NOT NULL DEFAULT 'USDC'::text,
+  status USER-DEFINED NOT NULL DEFAULT 'pending'::settlement_status,
+  tx_hash text,
+  chain text,
+  manifest_cid text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT settlements_pkey PRIMARY KEY (id),
+  CONSTRAINT settlements_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT settlements_payer_id_fkey FOREIGN KEY (payer_id) REFERENCES public.users(id),
+  CONSTRAINT settlements_payee_id_fkey FOREIGN KEY (payee_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.shared_media (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid NOT NULL,
+  expense_id uuid,
+  uploader_id text NOT NULL,
+  cid text NOT NULL,
+  media_type text NOT NULL,
   title text,
-  created_at timestamptz not null default now()
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT shared_media_pkey PRIMARY KEY (id),
+  CONSTRAINT shared_media_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT shared_media_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expenses(id),
+  CONSTRAINT shared_media_uploader_id_fkey FOREIGN KEY (uploader_id) REFERENCES public.users(id)
 );
-
-create index if not exists shared_media_group_idx on public.shared_media (group_id);
-create index if not exists shared_media_expense_idx on public.shared_media (expense_id);
-create index if not exists shared_media_uploader_idx on public.shared_media (uploader_id);
+CREATE TABLE public.users (
+  id text NOT NULL DEFAULT gen_random_uuid(),
+  email text NOT NULL UNIQUE,
+  name text NOT NULL,
+  username text NOT NULL UNIQUE,
+  ens_name text UNIQUE,
+  wallet_address text UNIQUE,
+  avatar_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
