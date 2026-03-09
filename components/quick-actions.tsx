@@ -13,7 +13,7 @@ export function QuickActions({ groupId }: QuickActionsProps) {
     {
       label: "Add Expense",
       icon: <Plus className="h-5 w-5" />,
-      href: `/groups/${groupId}/expenses/add`,
+      href: `/groups/${groupId}/expenses/create`,
       className: "bg-primary text-primary-foreground hover:bg-primary/90",
     },
     {
