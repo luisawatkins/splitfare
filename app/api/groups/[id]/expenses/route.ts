@@ -42,8 +42,7 @@ const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { i
         paidBy:users!expenses_created_by_fkey(id, name, avatar_url),
         splits:expense_splits(id, user_id, amount_owed, percentage_owed, shares)
       `)
-      .eq('group_id', groupId)
-      .is('deleted_at', null);
+      .eq('group_id', groupId);
 
     if (validatedFilters.category) {
       query = query.eq('category', validatedFilters.category);
