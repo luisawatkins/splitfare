@@ -33,28 +33,41 @@ import { GroupDetailsSkeleton } from "@/components/loading-states/group-loading"
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const router = useRouter();
-  const { user: privyUser } = usePrivy();
+  const { user: privyUser, getAccessToken } = usePrivy();
   const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
   const [activeTab, setActiveTab] = useState("expenses");
 
   const { data: group, isLoading: groupLoading, error } = useQuery({
     queryKey: ["group", id],
-    queryFn: () => apiClient.groups.get(id),
+    queryFn: async () => {
+      const token = await getAccessToken();
+      if (token) {
+        apiClient.setToken(token);
+      }
+      return apiClient.groups.get(id);
+    },
+    enabled: !!id && !!privyUser,
   });
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["group-members", id],
     queryFn: async () => {
-      const res = await fetch(`/api/groups/${id}/members`);
+      const token = await getAccessToken();
+      const res = await fetch(`/api/groups/${id}/members`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to fetch members");
       return result.data;
     },
+    enabled: !!id && !!privyUser,
   });
 
   const isLoading = groupLoading || membersLoading;
 
-  const currentUserBalance = members?.find((m: any) => m.user.id === currentUserId)?.balance || 0;
+  const currentUserBalance = members?.find((m: any) => m.user?.id === currentUserId)?.balance || 0;
 
   const activities = [
     {

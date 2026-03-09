@@ -67,11 +67,11 @@ export function MemberList({ groupId, currentUserId }: MemberListProps) {
       if (previousMembers) {
         if (action === 'remove') {
           queryClient.setQueryData<Member[]>(["group-members", groupId], 
-            previousMembers.filter(m => m.user.id !== userId)
+            previousMembers.filter(m => m.user?.id !== userId)
           );
         } else if (action === 'update' && role) {
           queryClient.setQueryData<Member[]>(["group-members", groupId], 
-            previousMembers.map(m => m.user.id === userId ? { ...m, role: role as any } : m)
+            previousMembers.map(m => m.user?.id === userId ? { ...m, role: role as any } : m)
           );
         }
       }
@@ -101,7 +101,7 @@ export function MemberList({ groupId, currentUserId }: MemberListProps) {
     );
   }
 
-  const currentUserMembership = members?.find(m => m.user.id === currentUserId);
+  const currentUserMembership = members?.find(m => m.user?.id === currentUserId);
   const currentUserRole = currentUserMembership?.role || 'member';
 
   const handleUpdate = (userId: string, role: string) => {
