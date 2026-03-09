@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/cn";
-import Image from "next/image";
+import { ReceiptViewer } from "@/components/receipt-viewer";
 
 const categoryIcons: Record<string, any> = {
   general: Tag,
@@ -125,7 +125,7 @@ export function StepReview({ members }: StepReviewProps) {
         </Card>
       </div>
 
-      {values.receiptUrl && (
+      {values.receiptCid && (
         <Card>
           <CardHeader className="py-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -134,14 +134,7 @@ export function StepReview({ members }: StepReviewProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="relative aspect-[3/4] rounded-lg overflow-hidden border">
-              <Image
-                src={values.receiptUrl}
-                alt="Receipt"
-                fill
-                className="object-contain"
-              />
-            </div>
+            <ReceiptViewer cid={values.receiptCid} />
           </CardContent>
         </Card>
       )}

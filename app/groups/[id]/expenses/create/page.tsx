@@ -29,13 +29,18 @@ export default function CreateExpensePage() {
   const { id: groupId } = useParams();
   const [currentStep, setCurrentStep] = useState(0);
   const { notify } = useToast();
-  const { user: privyUser } = usePrivy();
+  const { user: privyUser, getAccessToken } = usePrivy();
   const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
 
   const { data: members = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["group-members", groupId],
     queryFn: async () => {
-      const res = await fetch(`/api/groups/${groupId}/members`);
+      const token = await getAccessToken();
+      const res = await fetch(`/api/groups/${groupId}/members`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Failed to fetch members");
       return result.data.map((m: any) => ({
@@ -43,7 +48,7 @@ export default function CreateExpensePage() {
         name: m.user.id === currentUserId ? "You" : (m.user.name || m.user.email || "Unknown Member")
       }));
     },
-    enabled: !!groupId,
+    enabled: !!groupId && !!privyUser,
   });
 
   const form = useForm<ExpenseFormValues>({

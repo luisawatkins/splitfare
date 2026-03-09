@@ -19,6 +19,7 @@ export const expenseSchema = z.object({
   splitType: splitTypeSchema.default("EQUAL"),
   members: z.array(expenseMemberSchema).min(1, "At least one member must be involved"),
   receiptUrl: z.string().optional(),
+  receiptCid: z.string().optional(),
 });
 
 export type ExpenseFormValues = z.infer<typeof expenseSchema>;
