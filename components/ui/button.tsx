@@ -4,24 +4,24 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/cn";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-black uppercase tracking-[0.15em] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 active:translate-y-0.5 active:shadow-none",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-brand-pink text-slate-950 border-2 border-slate-900 shadow-brutalist hover:bg-brand-pink/90 hover:shadow-brutalist-lg",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "border-2 border-slate-800 bg-transparent text-slate-200 hover:bg-slate-900 hover:border-slate-700",
+        ghost: "text-slate-400 hover:bg-slate-900 hover:text-slate-100",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-brand-yellow text-slate-950 border-2 border-slate-900 shadow-brutalist-sm hover:bg-brand-yellow/90",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          "bg-rose-500 text-slate-50 border-2 border-slate-900 shadow-brutalist-sm hover:bg-rose-600"
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-9 w-9"
+        default: "h-12 px-6 py-3",
+        sm: "h-9 rounded-xl px-4 text-[10px]",
+        lg: "h-14 rounded-full px-10 text-base",
+        icon: "h-10 w-10 rounded-xl"
       }
     },
     defaultVariants: {

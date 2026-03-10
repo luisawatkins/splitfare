@@ -48,12 +48,29 @@ const config: Config = {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))"
+        },
+        brand: {
+          pink: "#ff6ad5",
+          "pink-light": "#ffe7f7",
+          yellow: "#fde047",
+          "yellow-light": "#fef08a",
+          purple: "#e4ddff",
+          "purple-light": "#f5f2ff",
+          blue: "#6fd3ff",
         }
       },
+      boxShadow: {
+        brutalist: "0 8px 0 0 rgba(15,23,42,1)",
+        "brutalist-sm": "0 4px 0 0 rgba(15,23,42,1)",
+        "brutalist-lg": "0 12px 0 0 rgba(15,23,42,1)",
+      },
       borderRadius: {
-        lg: "0.75rem",
-        md: "0.5rem",
-        sm: "0.375rem"
+        lg: "var(--radius-lg)",
+        md: "var(--radius-md)",
+        sm: "var(--radius-sm)",
+        xl: "1rem",
+        "2xl": "1.5rem",
+        "3xl": "2rem",
       },
       keyframes: {
         "accordion-down": {

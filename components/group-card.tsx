@@ -30,9 +30,9 @@ export function GroupCard({
 
   return (
     <Link href={`/groups/${id}`} className="block group">
-      <Card className="p-4 flex items-center justify-between border-border/50 hover:bg-muted/30 transition-all duration-300 rounded-3xl shadow-sm hover:shadow-md active:scale-[0.98]">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-2xl border border-primary/20 overflow-hidden">
+      <Card className="p-5 flex items-center justify-between border-2 border-slate-800 bg-slate-900/50 hover:bg-slate-900 hover:border-slate-700 transition-all duration-300 rounded-3xl shadow-none hover:shadow-brutalist-sm active:translate-y-0.5 active:shadow-none">
+        <div className="flex items-center gap-5">
+          <div className="h-16 w-16 rounded-2xl bg-brand-pink flex items-center justify-center text-slate-950 font-black text-3xl border-2 border-slate-900 overflow-hidden shadow-brutalist-sm group-hover:-translate-y-1 transition-transform">
             {avatarUrl ? (
               <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
             ) : (
@@ -40,30 +40,30 @@ export function GroupCard({
             )}
           </div>
 
-          <div className="space-y-1">
-            <h3 className="font-black tracking-tight text-lg leading-tight group-hover:text-primary transition-colors">
+          <div className="space-y-1.5">
+            <h3 className="font-black tracking-tight text-xl uppercase leading-none group-hover:text-brand-pink transition-colors">
               {name}
             </h3>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-[10px] px-1.5 h-4 font-black bg-slate-100 dark:bg-slate-800 border-none uppercase tracking-tighter">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-black bg-brand-yellow text-slate-950 px-2 py-0.5 rounded-lg uppercase tracking-wider border border-slate-900">
                 {category}
-              </Badge>
-              <div className="flex items-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                <Users className="h-3 w-3 mr-1" />
+              </span>
+              <div className="flex items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                <Users className="h-3 w-3 mr-1 stroke-[3]" />
                 {memberCount}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="text-right space-y-0.5">
+        <div className="text-right space-y-1">
           <p className={cn(
-            "text-sm font-black tracking-tight",
-            isPositive ? "text-emerald-500" : isNegative ? "text-rose-500" : "text-muted-foreground"
+            "text-lg font-black tracking-tight uppercase leading-none",
+            isPositive ? "text-brand-pink" : isNegative ? "text-rose-400" : "text-slate-500"
           )}>
             {isPositive ? "+" : ""}{currency} {Math.abs(userBalance).toFixed(2)}
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-tighter opacity-40">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-600">
             {isPositive ? "Owed to you" : isNegative ? "You owe" : "Settled"}
           </p>
         </div>
