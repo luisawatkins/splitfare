@@ -71,38 +71,40 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container max-w-2xl py-8 space-y-8 min-h-screen">
-      <header className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-3">
-          <Avatar 
-            src={user?.avatar_url || undefined} 
-            fallback={user?.name?.slice(0, 2).toUpperCase() || "SF"} 
-            className="h-10 w-10 border-2 border-primary/20 shadow-lg shadow-primary/10"
-          />
+    <div className="container max-w-2xl py-10 space-y-10 min-h-screen bg-slate-950">
+      <header className="flex items-center justify-between px-2">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Avatar 
+              src={user?.avatar_url || undefined} 
+              fallback={user?.name?.slice(0, 2).toUpperCase() || "SF"} 
+              className="h-14 w-14 border-2 border-slate-900 shadow-brutalist-sm bg-brand-pink text-slate-950 font-black text-xl"
+            />
+          </div>
           <div className="flex flex-col">
-            <h1 className="text-sm font-black tracking-tighter uppercase opacity-40">Good Morning,</h1>
-            <span className="text-xl font-black tracking-tighter leading-tight uppercase">{user?.name}</span>
+            <h1 className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-500">Good Morning,</h1>
+            <span className="text-2xl font-black tracking-tight leading-none uppercase text-slate-50">{user?.name}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="rounded-2xl bg-muted/50 hover:bg-muted transition-all active:scale-90">
-            <Search size={20} className="stroke-[2.5]" />
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="rounded-2xl bg-slate-900 border-2 border-slate-800 hover:border-slate-700 hover:bg-slate-800 transition-all active:translate-y-0.5 shadow-brutalist-sm h-11 w-11">
+            <Search size={20} className="stroke-[3] text-slate-400" />
           </Button>
-          <Button variant="ghost" size="icon" className="relative rounded-2xl bg-muted/50 hover:bg-muted transition-all active:scale-90">
-            <Bell size={20} className="stroke-[2.5]" />
-            <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-rose-500 border-2 border-background ring-1 ring-rose-500/20" />
+          <Button variant="ghost" size="icon" className="relative rounded-2xl bg-slate-900 border-2 border-slate-800 hover:border-slate-700 hover:bg-slate-800 transition-all active:translate-y-0.5 shadow-brutalist-sm h-11 w-11">
+            <Bell size={20} className="stroke-[3] text-slate-400" />
+            <span className="absolute top-1.5 right-1.5 h-3 w-3 rounded-full bg-rose-500 border-2 border-slate-950" />
           </Button>
         </div>
       </header>
 
       <BalanceSummary netBalance={totalBalance} currency="USDC" />
 
-      <section className="space-y-4 pt-4">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-sm font-black uppercase tracking-widest opacity-40">Your Groups</h3>
+      <section className="space-y-6 pt-4">
+        <div className="flex items-center justify-between px-2">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Your Groups</h3>
           <Link href="/groups/create">
-            <Button variant="ghost" size="sm" className="text-xs font-black uppercase tracking-tighter text-primary hover:bg-primary/10 rounded-xl">
-              <Plus size={16} className="mr-1 stroke-[3]" />
+            <Button variant="ghost" size="sm" className="text-[11px] font-black uppercase tracking-[0.2em] text-brand-pink hover:bg-brand-pink/10 rounded-xl px-4 h-9 border-2 border-transparent hover:border-brand-pink/20 transition-all">
+              <Plus size={16} className="mr-1.5 stroke-[4]" />
               New Group
             </Button>
           </Link>
@@ -110,15 +112,15 @@ export default function DashboardPage() {
 
         {!members || members.length === 0 ? (
           <EmptyState
-            icon={<Users className="h-12 w-12 stroke-[2.5]" />}
+            icon={<Users className="h-14 w-14 stroke-[3] text-brand-pink" />}
             title="No Groups Found"
             description="Start by creating a group to split expenses with your friends."
             actionLabel="Create Group"
             onActionClick={() => (window.location.href = "/groups/create")}
-            className="py-12 bg-muted/20 border-border/50 rounded-3xl"
+            className="py-16 bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[2.5rem]"
           />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {members.map((m, index) => (
               <motion.div
                 key={m.group.id}
@@ -141,9 +143,9 @@ export default function DashboardPage() {
         )}
       </section>
 
-      <Link href="/groups/create" className="md:hidden fixed bottom-24 right-6 z-50">
-        <Button className="h-16 w-16 rounded-full bg-primary shadow-2xl shadow-primary/40 active:scale-90 transition-all duration-300">
-          <Plus size={32} className="stroke-[3]" />
+      <Link href="/groups/create" className="md:hidden fixed bottom-28 right-6 z-50">
+        <Button className="h-16 w-16 rounded-full bg-brand-pink text-slate-950 border-2 border-slate-900 shadow-brutalist hover:shadow-brutalist-lg active:translate-y-1 active:shadow-none transition-all duration-300">
+          <Plus size={32} className="stroke-[4]" />
         </Button>
       </Link>
     </div>
