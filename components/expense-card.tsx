@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ExpenseWithDetails } from "@/hooks/useExpenses";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 
 const categoryIcons: Record<string, any> = {
   general: Tag,
@@ -30,6 +32,7 @@ interface ExpenseCardProps {
 }
 
 export function ExpenseCard({ expense, currentUserId }: ExpenseCardProps) {
+  const { id: groupId } = useParams();
   const category = CATEGORIES.find(c => c.id === expense.category);
   const Icon = categoryIcons[expense.category] || Tag;
   
@@ -53,48 +56,50 @@ export function ExpenseCard({ expense, currentUserId }: ExpenseCardProps) {
   }
 
   return (
-    <Card className="p-4 border-border/50 hover:bg-muted/30 transition-all group active:scale-[0.98]">
-      <div className="flex items-center gap-4">
-        <div className={cn(
-          "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
-          "bg-muted group-hover:bg-primary/10"
-        )}>
-          <Icon className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="font-bold text-sm truncate">{expense.description}</h4>
-            {hasReceipt && <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />}
+    <Link href={`/groups/${groupId}/expenses/${expense.id}`}>
+      <Card className="p-4 border-border/50 hover:bg-muted/30 transition-all group active:scale-[0.98]">
+        <div className="flex items-center gap-4">
+          <div className={cn(
+            "h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
+            "bg-muted group-hover:bg-primary/10"
+          )}>
+            <Icon className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          <p className="text-xs text-muted-foreground truncate">
-            {isPayer ? "You" : expense.paidBy.name} paid {formatCurrency(Number(expense.total_amount))}
-          </p>
-        </div>
 
-        <div className="text-right shrink-0">
-          {impactType !== "none" ? (
-            <>
-              <p className={cn(
-                "text-[10px] font-black uppercase tracking-widest",
-                impactType === "owed" ? "text-emerald-500" : "text-rose-500"
-              )}>
-                {impactLabel}
-              </p>
-              <p className={cn(
-                "text-sm font-black",
-                impactType === "owed" ? "text-emerald-500" : "text-rose-500"
-              )}>
-                {formatCurrency(impactAmount)}
-              </p>
-            </>
-          ) : (
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-              Not involved
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h4 className="font-bold text-sm truncate">{expense.description}</h4>
+              {hasReceipt && <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />}
+            </div>
+            <p className="text-xs text-muted-foreground truncate">
+              {isPayer ? "You" : expense.paidBy.name} paid {formatCurrency(Number(expense.total_amount))}
             </p>
-          )}
+          </div>
+
+          <div className="text-right shrink-0">
+            {impactType !== "none" ? (
+              <>
+                <p className={cn(
+                  "text-[10px] font-black uppercase tracking-widest",
+                  impactType === "owed" ? "text-emerald-500" : "text-rose-500"
+                )}>
+                  {impactLabel}
+                </p>
+                <p className={cn(
+                  "text-sm font-black",
+                  impactType === "owed" ? "text-emerald-500" : "text-rose-500"
+                )}>
+                  {formatCurrency(impactAmount)}
+                </p>
+              </>
+            ) : (
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                Not involved
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </Link>
   );
 }
