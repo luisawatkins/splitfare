@@ -10,6 +10,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { InviteShare } from "@/components/invite-share";
 import { MemberList } from "@/components/member-list";
 import { ExpenseList } from "@/components/expense-list";
+import { BalanceView } from "@/components/balance-view";
 import { BalanceSummary } from "@/components/balance-summary";
 import { ActivityFeed } from "@/components/activity-feed";
 import { QuickActions } from "@/components/quick-actions";
@@ -170,7 +171,7 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
             )}
             {activeTab === "balances" && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <MemberList groupId={id} currentUserId={currentUserId} />
+                <BalanceView groupId={id} />
               </div>
             )}
             {activeTab === "settle" && (
