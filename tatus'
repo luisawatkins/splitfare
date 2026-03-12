@@ -1,0 +1,32 @@
+[33mcommit e6e98dc9afac2511a77f71cd86fff6c7faa9a561[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/settlement-integration[m[33m)[m
+Author: luisawatkins <luisawatkins15@gmail.com>
+Date:   Fri Mar 13 01:19:40 2026 +0530
+
+    feat: implement settlement api logic and frontend integration
+
+[33mcommit 66cfe7c7ead7d60378e892b41fbfdf402004c189[m[33m ([m[1;31mupstream/main[m[33m, [m[1;31mupstream/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Merge: a6f7c52 296ca84
+Author: Pranav Konde <76070589+pranavkonde@users.noreply.github.com>
+Date:   Tue Mar 10 21:26:03 2026 +0530
+
+    Merge pull request #24 from pranavkonde/feat/balance-overview
+    
+    feat: implement intelligent group balances with automated debt simplification
+
+[33mcommit 296ca84a272588ee0a3bbac9a1a988b3f37bd4d6[m[33m ([m[1;31mupstream/Feat/balance-overview[m[33m)[m
+Author: Pranav Konde <pranavkonde2020@gmail.com>
+Date:   Tue Mar 10 21:24:45 2026 +0530
+
+    feat: integrate balances tab into group details page
+
+[33mcommit 26b60aa6989f56a2ff7112789193aba97a92c29f[m
+Author: Pranav Konde <pranavkonde2020@gmail.com>
+Date:   Tue Mar 10 21:24:45 2026 +0530
+
+    feat: build balance view and simplified debt list components
+
+[33mcommit b2f3977d77c2defa929299cf5caa62b4b5e0111a[m
+Author: Pranav Konde <pranavkonde2020@gmail.com>
+Date:   Tue Mar 10 21:24:45 2026 +0530
+
+    feat: implement balances API with debt simplification algorithm
