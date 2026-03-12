@@ -2,6 +2,9 @@ import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-
 import { supabaseAdmin } from '@/supabase/admin';
 import { CreateUserSchema } from '@/lib/validations';
 import { toDbUserId } from '@/lib/privy-utils';
+import { sendEmail } from '@/lib/email';
+import { WelcomeEmail } from '@/components/email/WelcomeEmail';
+import * as React from 'react';
 
 const handler = async (req: AuthenticatedRequest & { validatedBody: any }) => {
   try {
@@ -28,6 +31,12 @@ const handler = async (req: AuthenticatedRequest & { validatedBody: any }) => {
       console.error('Error creating user:', error);
       return createResponse(null, 400);
     }
+
+    sendEmail({
+      to: email,
+      subject: 'Welcome to SplitFare!',
+      react: React.createElement(WelcomeEmail, { userFirstname: name.split(' ')[0] }),
+    }).catch(err => console.error('Failed to send welcome email:', err));
 
     return createResponse(user, 201);
   } catch (error) {
