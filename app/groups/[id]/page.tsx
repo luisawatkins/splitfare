@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,7 @@ import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { toDbUserId } from "@/lib/privy-utils";
 import { GroupDetailsSkeleton } from "@/components/loading-states/group-loading";
+import { SettleView } from "@/components/settle-view";
 
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -114,50 +115,62 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
   ];
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-md">
+    <div className="min-h-screen bg-slate-950 pb-32">
+      <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b-2 border-slate-900 bg-slate-950/80 px-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/groups">
-              <ArrowLeft size={20} />
+          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-900 border-2 border-transparent hover:border-slate-800 transition-all" asChild>
+            <Link href="/dashboard">
+              <ArrowLeft size={20} className="stroke-[3]" />
             </Link>
           </Button>
           <div className="flex flex-col">
-            <h1 className="text-sm font-black uppercase tracking-tighter">{group.name}</h1>
-            <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{group.category}</span>
+            <h1 className="text-base font-black uppercase tracking-tight text-slate-50 leading-none">{group.name}</h1>
+            <span className="text-[10px] font-black opacity-40 uppercase tracking-[0.2em] text-slate-500 mt-1">{group.category}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex -space-x-2">
-            {[1, 2, 3].map((i) => (
-              <Avatar key={i} className="h-7 w-7 border-2 border-background ring-1 ring-border" fallback="U" />
+        <div className="flex items-center gap-3">
+          <div className="flex -space-x-3">
+            {members?.slice(0, 3).map((m: any, i: number) => (
+              <Avatar 
+                key={i} 
+                src={m.user?.avatar_url} 
+                className="h-9 w-9 border-2 border-slate-950 shadow-brutalist-sm ring-1 ring-slate-800" 
+                fallback={m.user?.name?.slice(0, 1).toUpperCase()} 
+              />
             ))}
+            {members && members.length > 3 && (
+              <div className="h-9 w-9 rounded-full bg-slate-900 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-brutalist-sm">
+                +{members.length - 3}
+              </div>
+            )}
           </div>
-          <Button variant="ghost" size="icon">
-            <Settings size={20} />
+          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-900 border-2 border-transparent hover:border-slate-800 transition-all">
+            <Settings size={20} className="stroke-[3]" />
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl p-4 space-y-6">
-        <BalanceSummary netBalance={currentUserBalance} currency={group.currency} />
+      <main className="mx-auto max-w-2xl p-6 space-y-10">
+        <BalanceSummary netBalance={currentUserBalance} currency={group.currency || "USDC"} />
         
         <QuickActions groupId={id} />
 
         <div className="space-y-4">
-          <div className="flex bg-muted/50 p-1 rounded-2xl overflow-x-auto no-scrollbar">
+          <div className="flex bg-slate-900 p-1.5 rounded-2xl border-2 border-slate-800 shadow-brutalist-sm overflow-x-auto no-scrollbar">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all duration-300 flex-1 whitespace-nowrap",
+                  "flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-1 whitespace-nowrap",
                   activeTab === tab.id 
-                    ? "bg-white dark:bg-slate-800 text-primary shadow-sm" 
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-brand-pink text-slate-950 shadow-brutalist-sm border-2 border-slate-950/10" 
+                    : "text-slate-500 hover:text-slate-300"
                 )}
               >
-                {tab.icon}
+                {React.cloneElement(tab.icon as React.ReactElement, { 
+                  className: cn("stroke-[3]", activeTab === tab.id ? "text-slate-950" : "text-slate-500") 
+                })}
                 {tab.label}
               </button>
             ))}
@@ -175,13 +188,13 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
               </div>
             )}
             {activeTab === "settle" && (
-              <Card className="p-12 text-center border-dashed bg-muted/30 rounded-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <p className="text-sm text-muted-foreground font-medium italic">Settle up your debts here. Feature coming soon!</p>
-              </Card>
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <SettleView groupId={id} />
+              </div>
             )}
             {activeTab === "media" && (
-              <Card className="p-12 text-center border-dashed bg-muted/30 rounded-3xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <p className="text-sm text-muted-foreground font-medium italic">Shared media and documents. Feature coming soon!</p>
+              <Card className="p-12 text-center border-2 border-dashed border-slate-800 bg-slate-900/30 rounded-[2.5rem] animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Shared media and documents. Coming soon!</p>
               </Card>
             )}
           </div>
