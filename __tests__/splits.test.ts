@@ -99,4 +99,49 @@ describe("Split Algorithms", () => {
       expect(result.reduce((acc, r) => acc + r.amount, 0)).toBe(100);
     });
   });
+
+  describe("Split Edge Cases & Rounding", () => {
+    it("should handle $0.01 split between 2 members (equal)", () => {
+      const result = calculateEqualSplit(0.01, ["u1", "u2"]);
+      expect(result[0].amount).toBe(0.01);
+      expect(result[1].amount).toBe(0.00);
+      expect(result.reduce((acc, r) => acc + r.amount, 0)).toBe(0.01);
+    });
+
+    it("should handle $999,999.99 split between 3 members (equal)", () => {
+      const result = calculateEqualSplit(999999.99, ["u1", "u2", "u3"]);
+      expect(result[0].amount).toBe(333333.33);
+      expect(result[1].amount).toBe(333333.33);
+      expect(result[2].amount).toBe(333333.33);
+      expect(result.reduce((acc, r) => acc + r.amount, 0)).toBe(999999.99);
+    });
+
+    it("should handle single member expense", () => {
+      const result = calculateEqualSplit(100, ["u1"]);
+      expect(result).toHaveLength(1);
+      expect(result[0].amount).toBe(100);
+    });
+
+    it("should handle very small amounts with percentages", () => {
+      const splits = [
+        { userId: "u1", percentage: 50 },
+        { userId: "u2", percentage: 50 },
+      ];
+      const result = calculatePercentageSplit(0.01, splits);
+      expect(result[0].amount).toBe(0.01);
+      expect(result[1].amount).toBe(0.00);
+      expect(result.reduce((acc, r) => acc + r.amount, 0)).toBe(0.01);
+    });
+
+    it("should handle very large amounts with shares", () => {
+      const splits = [
+        { userId: "u1", shares: 1 },
+        { userId: "u2", shares: 1 },
+      ];
+      const result = calculateSharesSplit(10000000.01, splits);
+      expect(result[0].amount).toBe(5000000.01);
+      expect(result[1].amount).toBe(5000000.00);
+      expect(result.reduce((acc, r) => acc + r.amount, 0)).toBe(10000000.01);
+    });
+  });
 });

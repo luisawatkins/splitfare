@@ -75,4 +75,22 @@ describe("Balance Calculator", () => {
     const sum = Object.values(result).reduce((acc, b) => acc + b, 0);
     expect(Math.abs(sum)).toBeLessThan(0.001);
   });
+
+  it("should calculate balance correctly with 10+ expense combinations", () => {
+    const manyExpenses = Array.from({ length: 15 }, (_, i) => ({
+      id: `e${i}`,
+      paidById: members[i % 3].id,
+      amount: 30,
+      splits: [
+        { userId: "u1", amount: 10 },
+        { userId: "u2", amount: 10 },
+        { userId: "u3", amount: 10 },
+      ],
+    }));
+
+    const result = calculateNetBalances(members, manyExpenses, []);
+    expect(result["u1"]).toBe(0);
+    expect(result["u2"]).toBe(0);
+    expect(result["u3"]).toBe(0);
+  });
 });

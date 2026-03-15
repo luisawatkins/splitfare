@@ -63,4 +63,31 @@ describe("Debt Simplifier", () => {
     const result = simplifyDebts(balances);
     expect(result).toEqual([]);
   });
+
+  it("should simplify debts for 5+ members", () => {
+    const balances = {
+      "u1": -100,
+      "u2": 20,
+      "u3": 20,
+      "u4": 20,
+      "u5": 20,
+      "u6": 20,
+    };
+
+    const result = simplifyDebts(balances);
+    expect(result).toHaveLength(5);
+    result.forEach(r => {
+      expect(r.from).toBe("u1");
+      expect(r.amount).toBe(20);
+    });
+  });
+
+  it("should handle large amounts correctly", () => {
+    const balances = {
+      "u1": -999999.99,
+      "u2": 999999.99,
+    };
+    const result = simplifyDebts(balances);
+    expect(result[0].amount).toBe(999999.99);
+  });
 });
