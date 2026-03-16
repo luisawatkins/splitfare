@@ -42,6 +42,7 @@ CREATE TABLE public.expenses (
   category USER-DEFINED,
   split_type USER-DEFINED NOT NULL DEFAULT 'equal'::split_type,
   external_tx_hash text,
+  deleted_at timestamp with time zone,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT expenses_pkey PRIMARY KEY (id),

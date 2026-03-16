@@ -29,16 +29,18 @@ const leaveGroup = async (req: AuthenticatedRequest, { params }: { params: { id:
       .from('expenses')
       .select('total_amount')
       .eq('group_id', groupId)
-      .eq('created_by', userId);
+      .eq('created_by', userId)
+      .is('deleted_at', null);
 
     if (paidError) throw paidError;
     const totalPaid = totalPaidData?.reduce((sum, exp) => sum + Number(exp.total_amount), 0) || 0;
 
     const { data: totalOwedData, error: owedError } = await supabaseAdmin
       .from('expense_splits')
-      .select('amount_owed, expenses!inner(group_id)')
+      .select('amount_owed, expenses!inner(group_id, deleted_at)')
       .eq('user_id', userId)
-      .eq('expenses.group_id', groupId);
+      .eq('expenses.group_id', groupId)
+      .is('expenses.deleted_at', null);
 
     if (owedError) throw owedError;
     const totalOwed = totalOwedData?.reduce((sum, split) => sum + Number(split.amount_owed), 0) || 0;

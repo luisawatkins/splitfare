@@ -32,7 +32,7 @@ const triggerAnchor = async (req: AuthenticatedRequest, { params }: { params: { 
 
     // 4. Fetch record count
     const [expensesCount, settlementsCount] = await Promise.all([
-      supabaseAdmin.from('expenses').select('id', { count: 'exact', head: true }).eq('group_id', groupId),
+      supabaseAdmin.from('expenses').select('id', { count: 'exact', head: true }).eq('group_id', groupId).is('deleted_at', null),
       supabaseAdmin.from('settlements').select('id', { count: 'exact', head: true }).eq('group_id', groupId).eq('status', 'completed')
     ]);
     const totalRecords = (expensesCount.count || 0) + (settlementsCount.count || 0);

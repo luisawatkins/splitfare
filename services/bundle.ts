@@ -38,7 +38,8 @@ export class GroupBundleService {
           splits:expense_splits(user_id, amount_owed),
           media:shared_media(cid)
         `)
-        .eq('group_id', groupId),
+        .eq('group_id', groupId)
+        .is('deleted_at', null),
       supabaseAdmin
         .from('settlements')
         .select('id, payer_id, payee_id, amount, currency, created_at, tx_hash, manifest_cid')
