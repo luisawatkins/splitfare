@@ -1,15 +1,22 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TYPE public.bundle_status AS ENUM ('PENDING', 'UPLOADING', 'UPLOADED', 'ANCHORING', 'ANCHORED', 'FAILED');
+
 CREATE TABLE public.cid_anchors (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   group_id uuid NOT NULL,
-  root_cid text NOT NULL,
+  root_cid text,
   car_cid text,
   anchor_tx_hash text,
   chain text,
   record_count integer,
-  anchored_at timestamp with time zone NOT NULL DEFAULT now(),
+  status public.bundle_status NOT NULL DEFAULT 'PENDING'::bundle_status,
+  error_message text,
+  retry_count integer DEFAULT 0,
+  anchored_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT cid_anchors_pkey PRIMARY KEY (id),
   CONSTRAINT cid_anchors_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id)
 );
