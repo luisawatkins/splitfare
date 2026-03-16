@@ -34,6 +34,7 @@ import { toDbUserId } from "@/lib/privy-utils";
 import { GroupDetailsSkeleton } from "@/components/loading-states/group-loading";
 import { SettleView } from "@/components/settle-view";
 import { GroupExport } from "@/components/group-export";
+import { ShieldCheck } from "lucide-react";
 
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -127,7 +128,13 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
             </Link>
           </Button>
           <div className="flex flex-col">
-            <h1 className="text-base font-black uppercase tracking-tight text-slate-50 leading-none">{group.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-black uppercase tracking-tight text-slate-50 leading-none">{group.name}</h1>
+              <Link href={`/groups/${id}/verify`} className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all">
+                <ShieldCheck size={10} className="stroke-[3]" />
+                <span className="text-[8px] font-black uppercase tracking-widest">Verified</span>
+              </Link>
+            </div>
             <span className="text-[10px] font-black opacity-40 uppercase tracking-[0.2em] text-slate-500 mt-1">{group.category}</span>
           </div>
         </div>
