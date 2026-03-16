@@ -1,26 +1,37 @@
 import { supabaseAdmin } from '@/supabase/admin';
 import { GroupBundleService } from './bundle';
 import { createServerStorachaService } from '@/lib/storacha-server';
-import { createPublicClient, createWalletClient, http, parseAbiItem } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
+import { ethers, JsonRpcProvider, Wallet, Contract, TransactionResponse } from 'ethers';
 import { splitFareCIDRegistryAbi } from '@/lib/contracts/abi';
 
-const REGISTRY_ADDRESS = process.env.NEXT_PUBLIC_CID_REGISTRY_ADDRESS as `0x${string}`;
-const ANCHOR_PRIVATE_KEY = process.env.ANCHOR_PRIVATE_KEY as `0x${string}`;
+const REGISTRY_ADDRESS = process.env.NEXT_PUBLIC_CID_REGISTRY_ADDRESS as string;
+const ANCHOR_PRIVATE_KEY = process.env.ANCHOR_PRIVATE_KEY as string;
+const RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000; // 2 seconds
 
 export class AnchoringService {
   private bundleService: GroupBundleService;
+  private provider: JsonRpcProvider;
+  private wallet: Wallet;
+  private contract: Contract;
 
   constructor(bundleService: GroupBundleService) {
     this.bundleService = bundleService;
+    this.provider = new JsonRpcProvider(RPC_URL);
+    
+    if (!ANCHOR_PRIVATE_KEY) {
+      throw new Error('ANCHOR_PRIVATE_KEY is not configured');
+    }
+    
+    this.wallet = new Wallet(ANCHOR_PRIVATE_KEY, this.provider);
+    this.contract = new Contract(REGISTRY_ADDRESS, splitFareCIDRegistryAbi, this.wallet);
   }
 
   async anchorAllGroups() {
     console.log('Starting daily anchoring for all active groups...');
 
-    // 1. Fetch all groups that had activity since their last anchor
-    // For simplicity, we'll fetch all groups for now
     const { data: groups, error: groupsError } = await supabaseAdmin
       .from('groups')
       .select('id, name');
@@ -36,25 +47,32 @@ export class AnchoringService {
       try {
         console.log(`Processing group: ${group.name} (${group.id})`);
         
-        // 2. Create bundle and upload to Storacha
         const rootCid = await this.bundleService.createBundle(group.id);
         console.log(`Bundle created for ${group.name}. Root CID: ${rootCid}`);
 
-        // 3. Anchor on-chain
-        const txHash = await this.anchorOnChain(group.id, rootCid);
-        console.log(`Anchored ${group.name} on-chain. TX: ${txHash}`);
+        // Fetch record count (expenses + settlements)
+        const [expensesCount, settlementsCount] = await Promise.all([
+          supabaseAdmin.from('expenses').select('id', { count: 'exact', head: true }).eq('group_id', group.id),
+          supabaseAdmin.from('settlements').select('id', { count: 'exact', head: true }).eq('group_id', group.id).eq('status', 'completed')
+        ]);
+        const totalRecords = (expensesCount.count || 0) + (settlementsCount.count || 0);
 
-        // 4. Update cid_anchors table
+        const txReceipt = await this.anchorWithRetry(group.id, rootCid, totalRecords);
+        console.log(`Anchored ${group.name} on-chain. TX: ${txReceipt.hash}`);
+
+        // Update cid_anchors table
         const { error: anchorError } = await supabaseAdmin
           .from('cid_anchors')
           .insert({
             group_id: group.id,
             root_cid: rootCid,
-            anchor_tx_hash: txHash,
+            anchor_tx_hash: txReceipt.hash,
+            chain: 'base-sepolia',
+            record_count: totalRecords
           });
 
         if (anchorError) {
-          console.error(`Failed to record anchor for ${group.name}:`, anchorError);
+          console.error(`Failed to record anchor in DB for ${group.name}:`, anchorError);
         }
       } catch (error) {
         console.error(`Error anchoring group ${group.name}:`, error);
@@ -64,53 +82,56 @@ export class AnchoringService {
     console.log('Finished anchoring all groups.');
   }
 
-  private async anchorOnChain(groupId: string, cid: string): Promise<string> {
-    if (!ANCHOR_PRIVATE_KEY || !REGISTRY_ADDRESS) {
-      throw new Error('Anchoring environment variables not configured');
-    }
-
-    const account = privateKeyToAccount(ANCHOR_PRIVATE_KEY);
-    
-    const publicClient = createPublicClient({
-      chain: baseSepolia,
-      transport: http(),
-    });
-
-    const walletClient = createWalletClient({
-      account,
-      chain: baseSepolia,
-      transport: http(),
-    });
-
-    // The contract uses uint256 for groupId in some places and bytes32 in others 
-    // based on the README vs ABI. Let's look at the ABI again.
-    // ABI says uint256 groupId.
-    // We need to convert UUID to a big integer or similar if the contract expects uint256.
-    // UUIDs are 128-bit. We can parse it as a hex and then to BigInt.
+  async anchorWithRetry(groupId: string, cid: string, recordCount: number): Promise<any> {
+    let lastError: any;
     const numericGroupId = BigInt('0x' + groupId.replace(/-/g, ''));
 
-    // Fetch record count (expenses + settlements) for the event/contract
-    const [expensesCount, settlementsCount] = await Promise.all([
-        supabaseAdmin.from('expenses').select('id', { count: 'exact', head: true }).eq('group_id', groupId),
-        supabaseAdmin.from('settlements').select('id', { count: 'exact', head: true }).eq('group_id', groupId).eq('status', 'completed')
-    ]);
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      try {
+        // Estimate gas before submission
+        const gasEstimate = await this.contract.anchorGroupCID.estimateGas(
+          numericGroupId,
+          cid,
+          BigInt(recordCount)
+        );
 
-    const totalRecords = (expensesCount.count || 0) + (settlementsCount.count || 0);
+        const tx: TransactionResponse = await this.contract.anchorGroupCID(
+          numericGroupId,
+          cid,
+          BigInt(recordCount),
+          {
+            gasLimit: (gasEstimate * 120n) / 100n, // 20% buffer
+          }
+        );
 
-    const { request } = await publicClient.simulateContract({
-      address: REGISTRY_ADDRESS,
-      abi: splitFareCIDRegistryAbi,
-      functionName: 'anchorGroupCID',
-      args: [numericGroupId, cid, BigInt(totalRecords)],
-      account,
-    });
+        const receipt = await tx.wait();
+        if (!receipt) throw new Error('Transaction failed: No receipt');
+        return receipt;
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`Anchoring attempt ${i + 1} failed for group ${groupId}:`, error.message);
+        if (i < MAX_RETRIES - 1) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (i + 1)));
+        }
+      }
+    }
 
-    const hash = await walletClient.writeContract(request);
-    
-    // Wait for transaction to be mined
-    await publicClient.waitForTransactionReceipt({ hash });
+    throw lastError;
+  }
 
-    return hash;
+  async verifyAnchor(groupId: string, cid: string): Promise<boolean> {
+    const numericGroupId = BigInt('0x' + groupId.replace(/-/g, ''));
+    return await this.contract.verifyCID(numericGroupId, cid);
+  }
+
+  async getAnchorHistory(groupId: string) {
+    const numericGroupId = BigInt('0x' + groupId.replace(/-/g, ''));
+    const history = await this.contract.getAnchorHistory(numericGroupId);
+    return history.map((h: any) => ({
+      cid: h.cid,
+      timestamp: Number(h.timestamp),
+      recordCount: Number(h.recordCount),
+    }));
   }
 }
 
