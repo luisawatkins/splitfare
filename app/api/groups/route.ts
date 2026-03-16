@@ -4,6 +4,9 @@ import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { nanoid } from 'nanoid';
 import { createServerStorachaService } from '@/lib/storacha-server';
+import { sendEmail } from '@/lib/email';
+import { GroupCreatedEmail } from '@/components/email/GroupCreatedEmail';
+import * as React from 'react';
 
 const getGroups = async (req: AuthenticatedRequest) => {
   const userId = toDbUserId(req.user.id);
@@ -58,6 +61,20 @@ const createGroup = async (req: AuthenticatedRequest & { validatedBody: any }) =
 
     if (memberError) {
       console.error('Error adding creator to group:', memberError);
+    }
+
+    const { data: creator } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .eq('id', userId)
+      .single();
+
+    if (creator?.email) {
+      sendEmail({
+        to: creator.email,
+        subject: `Group Created: ${name}`,
+        react: React.createElement(GroupCreatedEmail, { groupName: name, inviteCode }),
+      }).catch(err => console.error('Failed to send group creation email:', err));
     }
 
     let spaceDid = null;
