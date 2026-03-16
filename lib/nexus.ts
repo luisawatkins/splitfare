@@ -63,7 +63,9 @@ export class NexusService {
     return {
       sourceChainId: bestSource.chainId,
       sourceBalance: bestSource.balance,
+      destChainId: toChainId,
       isDirect: bestSource.chainId === toChainId,
+      gasEstimate: "0.001", // Mock gas estimate
     };
   }
 
