@@ -111,6 +111,21 @@ CREATE TABLE public.notifications (
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 
+CREATE TABLE public.export_history (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  group_id uuid, -- NULL for "all groups" export
+  user_id text NOT NULL,
+  format text NOT NULL, -- 'car', 'json', 'csv', 'pdf'
+  status text NOT NULL DEFAULT 'pending', -- 'pending', 'completed', 'failed'
+  root_cid text, -- For CAR/JSON exports if applicable
+  file_url text, -- If stored somewhere else
+  error_message text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT export_history_pkey PRIMARY KEY (id),
+  CONSTRAINT export_history_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT export_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+
 CREATE TABLE public.users (
   id text NOT NULL DEFAULT gen_random_uuid(),
   email text NOT NULL UNIQUE,
