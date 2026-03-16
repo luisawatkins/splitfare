@@ -1,43 +1,87 @@
 import { withAuth, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
-import { supabaseAdmin } from '@/supabase/admin';
-import { GroupBundleService } from '@/services/bundle';
+import { ExporterService, ExportFormat } from '@/services/exporter';
+import { generatePdfStream } from '@/services/pdf-generator';
 import { createServerStorachaService } from '@/lib/storacha-server';
-import { toDbUserId } from '@/lib/privy-utils';
+import { NextResponse } from 'next/server';
 
-const exportGroupData = async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
   try {
-    const groupId = params.id;
-    const userId = toDbUserId(req.user.id);
+    const { id: groupId } = params;
+    const url = new URL(req.url);
+    const format = (url.searchParams.get('format') || 'json') as ExportFormat;
+    const userId = req.user.id;
 
-    // 1. Verify group membership
-    const { data: membership, error: memberError } = await supabaseAdmin
-      .from('group_members')
-      .select('id')
-      .eq('group_id', groupId)
-      .eq('user_id', userId)
-      .single();
-
-    if (memberError || !membership) {
-      return createErrorResponse(new Error('Access denied or group not found'));
-    }
-
-    // 2. Initialize services
     const storacha = await createServerStorachaService();
-    const bundleService = new GroupBundleService(storacha);
+    const exporter = new ExporterService(storacha);
 
-    // 3. Create bundle and upload
-    const rootCid = await bundleService.createBundle(groupId);
+    // 1. Log export start
+    const exportId = await exporter.logExport(userId, format, groupId === 'all' ? null : groupId);
 
-    // 4. Return the CID and a download link (via Storacha gateway)
-    return createResponse({
-      rootCid,
-      downloadUrl: `https://w3s.link/ipfs/${rootCid}`,
-      message: 'Group data successfully exported to Storacha'
-    });
+    try {
+      if (groupId === 'all') {
+        const data = await exporter.exportAllGroups(userId);
+        await exporter.updateExportStatus(exportId, 'completed');
+        return new NextResponse(data, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Disposition': `attachment; filename="all_groups_export_${Date.now()}.json"`,
+          },
+        });
+      }
+
+      switch (format) {
+        case 'json': {
+          const data = await exporter.exportToJson(groupId);
+          await exporter.updateExportStatus(exportId, 'completed');
+          return new NextResponse(data, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Disposition': `attachment; filename="group_${groupId}_export_${Date.now()}.json"`,
+            },
+          });
+        }
+
+        case 'csv': {
+          const { expenses, settlements } = await exporter.exportToCsv(groupId);
+          // For CSV, we'll return a zip-like structure or just two files.
+          // Since it's a single response, we'll return a JSON with both CSVs for simplicity in the UI to download.
+          // Or we could return a multipart response, but JSON is easier for now.
+          // Actually, let's return a single CSV with a combined view if possible, or just expenses.
+          // The requirement says "separate files for expenses and settlements".
+          // I'll return a JSON containing both, and the UI can handle creating two blobs.
+          await exporter.updateExportStatus(exportId, 'completed');
+          return createResponse({ expenses, settlements });
+        }
+
+        case 'car': {
+          const rootCid = await exporter.exportToCar(groupId);
+          await exporter.updateExportStatus(exportId, 'completed', { rootCid });
+          return createResponse({ rootCid, url: `https://w3s.link/ipfs/${rootCid}` });
+        }
+
+        case 'pdf': {
+          const data = await exporter.getGroupData(groupId);
+          const stream = await generatePdfStream(data);
+          
+          await exporter.updateExportStatus(exportId, 'completed');
+          
+          // @ts-ignore - renderToStream returns a Node stream which works in Next.js NextResponse
+          return new NextResponse(stream as any, {
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': `attachment; filename="group_${groupId}_report_${Date.now()}.pdf"`,
+            },
+          });
+        }
+
+        default:
+          throw new Error('Invalid export format');
+      }
+    } catch (err: any) {
+      await exporter.updateExportStatus(exportId, 'failed', { errorMessage: err.message });
+      throw err;
+    }
   } catch (error) {
-    console.error('Error exporting group data:', error);
     return createErrorResponse(error);
   }
-};
-
-export const GET = withAuth(exportGroupData);
+});
