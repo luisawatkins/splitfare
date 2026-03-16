@@ -52,7 +52,7 @@ export class AnchoringService {
 
         // Fetch record count (expenses + settlements)
         const [expensesCount, settlementsCount] = await Promise.all([
-          supabaseAdmin.from('expenses').select('id', { count: 'exact', head: true }).eq('group_id', group.id),
+          supabaseAdmin.from('expenses').select('id', { count: 'exact', head: true }).eq('group_id', group.id).is('deleted_at', null),
           supabaseAdmin.from('settlements').select('id', { count: 'exact', head: true }).eq('group_id', group.id).eq('status', 'completed')
         ]);
         const totalRecords = (expensesCount.count || 0) + (settlementsCount.count || 0);

@@ -75,7 +75,8 @@ const getBalances = async (req: AuthenticatedRequest, { params }: { params: { id
         total_amount,
         splits:expense_splits(user_id, amount_owed)
       `)
-      .eq('group_id', groupId);
+      .eq('group_id', groupId)
+      .is('deleted_at', null);
 
     if (expensesError) {
       return createResponse({ error: 'Failed to fetch expenses' }, 400);

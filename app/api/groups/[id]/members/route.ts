@@ -49,7 +49,8 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
         created_by,
         splits:expense_splits(user_id, amount_owed)
       `)
-      .eq('group_id', groupId);
+      .eq('group_id', groupId)
+      .is('deleted_at', null);
 
     if (expensesError) {
       console.error('Error fetching expenses for balance:', expensesError);

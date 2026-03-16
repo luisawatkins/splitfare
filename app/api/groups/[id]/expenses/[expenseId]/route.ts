@@ -29,6 +29,7 @@ const getExpenseDetail = async (req: AuthenticatedRequest, { params }: { params:
       `)
       .eq('id', expenseId)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .single();
 
     if (fetchError || !expense) {
@@ -53,6 +54,7 @@ const updateExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       .select('created_by')
       .eq('id', expenseId)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .single();
 
     if (fetchError || !expense) {
@@ -137,6 +139,7 @@ const deleteExpense = async (req: AuthenticatedRequest, { params }: { params: { 
       .select('created_by')
       .eq('id', expenseId)
       .eq('group_id', groupId)
+      .is('deleted_at', null)
       .single();
 
     if (fetchError || !expense) {
@@ -156,7 +159,10 @@ const deleteExpense = async (req: AuthenticatedRequest, { params }: { params: { 
 
     const { error: deleteError } = await supabaseAdmin
       .from('expenses')
-      .update({ updated_at: new Date().toISOString() }) // Fallback since deleted_at is missing
+      .update({ 
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString() 
+      })
       .eq('id', expenseId);
 
     if (deleteError) {
