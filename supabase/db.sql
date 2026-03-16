@@ -7,6 +7,8 @@ CREATE TABLE public.cid_anchors (
   root_cid text NOT NULL,
   car_cid text,
   anchor_tx_hash text,
+  chain text,
+  record_count integer,
   anchored_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT cid_anchors_pkey PRIMARY KEY (id),
   CONSTRAINT cid_anchors_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id)
