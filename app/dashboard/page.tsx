@@ -4,19 +4,23 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { usePrivy } from "@privy-io/react-auth";
 import { toDbUserId } from "@/lib/privy-utils";
+import { cn } from "@/lib/cn";
 import { GroupCard } from "@/components/group-card";
 import { BalanceSummary } from "@/components/balance-summary";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Plus, Users, Receipt, Search, Bell, Settings } from "lucide-react";
+import { Plus, Users, Receipt, Search, Bell, Settings, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { GroupListSkeleton } from "@/components/loading-states/group-loading";
+import { ChainBalances } from "@/components/chain-balances";
+import { useState } from "react";
 
 export default function DashboardPage() {
   const { user: privyUser, getAccessToken } = usePrivy();
   const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
+  const [activeTab, setActiveTab] = useState<'groups' | 'wallet'>('groups');
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['me'],
@@ -99,49 +103,92 @@ export default function DashboardPage() {
 
       <BalanceSummary netBalance={totalBalance} currency="USDC" />
 
-      <section className="space-y-6 pt-4">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Your Groups</h3>
-          <Link href="/groups/create">
-            <Button variant="ghost" size="sm" className="text-[11px] font-black uppercase tracking-[0.2em] text-brand-pink hover:bg-brand-pink/10 rounded-xl px-4 h-9 border-2 border-transparent hover:border-brand-pink/20 transition-all">
-              <Plus size={16} className="mr-1.5 stroke-[4]" />
-              New Group
-            </Button>
-          </Link>
-        </div>
+      <div className="flex p-1 bg-slate-900 rounded-2xl border-2 border-slate-800 shadow-brutalist-sm">
+        <button 
+          onClick={() => setActiveTab('groups')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+            activeTab === 'groups' ? "bg-brand-pink text-slate-950 shadow-brutalist-sm" : "text-slate-500 hover:text-slate-300"
+          )}
+        >
+          <Users size={16} className={activeTab === 'groups' ? "stroke-[3]" : "stroke-[2]"} />
+          Groups
+        </button>
+        <button 
+          onClick={() => setActiveTab('wallet')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+            activeTab === 'wallet' ? "bg-brand-yellow text-slate-950 shadow-brutalist-sm" : "text-slate-500 hover:text-slate-300"
+          )}
+        >
+          <Wallet size={16} className={activeTab === 'wallet' ? "stroke-[3]" : "stroke-[2]"} />
+          Unified Wallet
+        </button>
+      </div>
 
-        {!members || members.length === 0 ? (
-          <EmptyState
-            icon={<Users className="h-14 w-14 stroke-[3] text-brand-pink" />}
-            title="No Groups Found"
-            description="Start by creating a group to split expenses with your friends."
-            actionLabel="Create Group"
-            onActionClick={() => (window.location.href = "/groups/create")}
-            className="py-16 bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[2.5rem]"
-          />
+      <AnimatePresence mode="wait">
+        {activeTab === 'groups' ? (
+          <motion.section 
+            key="groups"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-6 pt-4"
+          >
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Your Groups</h3>
+              <Link href="/groups/create">
+                <Button variant="ghost" size="sm" className="text-[11px] font-black uppercase tracking-[0.2em] text-brand-pink hover:bg-brand-pink/10 rounded-xl px-4 h-9 border-2 border-transparent hover:border-brand-pink/20 transition-all">
+                  <Plus size={16} className="mr-1.5 stroke-[4]" />
+                  New Group
+                </Button>
+              </Link>
+            </div>
+
+            {!members || members.length === 0 ? (
+              <EmptyState
+                icon={<Users className="h-14 w-14 stroke-[3] text-brand-pink" />}
+                title="No Groups Found"
+                description="Start by creating a group to split expenses with your friends."
+                actionLabel="Create Group"
+                onActionClick={() => (window.location.href = "/groups/create")}
+                className="py-16 bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[2.5rem]"
+              />
+            ) : (
+              <div className="space-y-4">
+                {members.map((m, index) => (
+                  <motion.div
+                    key={m.group.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <GroupCard
+                      id={m.group.id}
+                      name={m.group.name}
+                      category={m.group.category}
+                      memberCount={m.memberCount}
+                      userBalance={m.balance}
+                      currency={m.group.currency || "USDC"}
+                      avatarUrl={m.group.avatar_url}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.section>
         ) : (
-          <div className="space-y-4">
-            {members.map((m, index) => (
-              <motion.div
-                key={m.group.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <GroupCard
-                  id={m.group.id}
-                  name={m.group.name}
-                  category={m.group.category}
-                  memberCount={m.memberCount}
-                  userBalance={m.balance}
-                  currency={m.group.currency || "USDC"}
-                  avatarUrl={m.group.avatar_url}
-                />
-              </motion.div>
-            ))}
-          </div>
+          <motion.section
+            key="wallet"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="pt-4"
+          >
+            <ChainBalances />
+          </motion.section>
         )}
-      </section>
+      </AnimatePresence>
 
       <Link href="/groups/create" className="md:hidden fixed bottom-28 right-6 z-50">
         <Button className="h-16 w-16 rounded-full bg-brand-pink text-slate-950 border-2 border-slate-900 shadow-brutalist hover:shadow-brutalist-lg active:translate-y-1 active:shadow-none transition-all duration-300">

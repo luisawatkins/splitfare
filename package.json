@@ -12,6 +12,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@avail-project/nexus-core": "^1.2.0",
     "@ensdomains/ensjs": "^4.2.2",
     "@hookform/resolvers": "^5.2.2",
     "@privy-io/node": "^0.9.0",
