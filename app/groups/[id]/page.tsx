@@ -24,7 +24,8 @@ import {
   Wallet,
   Calendar,
   Image as ImageIcon,
-  History
+  History,
+  Download
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { toDbUserId } from "@/lib/privy-utils";
 import { GroupDetailsSkeleton } from "@/components/loading-states/group-loading";
 import { SettleView } from "@/components/settle-view";
+import { GroupExport } from "@/components/group-export";
 
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -112,6 +114,7 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
     { id: "balances", label: "Balances", icon: <History size={16} /> },
     { id: "settle", label: "Settle", icon: <Wallet size={16} /> },
     { id: "media", label: "Media", icon: <ImageIcon size={16} /> },
+    { id: "export", label: "Export", icon: <Download size={16} /> },
   ];
 
   return (
@@ -196,6 +199,11 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
               <Card className="p-12 text-center border-2 border-dashed border-slate-800 bg-slate-900/30 rounded-[2.5rem] animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Shared media and documents. Coming soon!</p>
               </Card>
+            )}
+            {activeTab === "export" && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <GroupExport groupId={id} />
+              </div>
             )}
           </div>
         </div>
