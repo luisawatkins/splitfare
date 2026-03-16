@@ -4,10 +4,12 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
-import { ArrowRight, Wallet, CheckCircle2, ChevronRight } from "lucide-react";
+import { ArrowRight, Wallet, CheckCircle2, ChevronRight, BellRing } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { useState } from "react";
+import { toast } from "@/components/ui/toast";
 
 export interface Debt {
   from: { id: string; name: string };
@@ -22,6 +24,40 @@ interface DebtListProps {
 }
 
 export function DebtList({ debts, groupId, currentUserId }: DebtListProps) {
+  const [nudging, setNudging] = useState<string | null>(null);
+
+  const handleNudge = async (receiverId: string) => {
+    try {
+      setNudging(receiverId);
+      const response = await fetch(`/api/groups/${groupId}/remind/${receiverId}`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Nudge sent!",
+          description: "We've sent a reminder to settle the debt.",
+        });
+      } else {
+        toast({
+          title: "Could not send nudge",
+          description: result.error || "Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('Error sending nudge:', err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setNudging(null);
+    }
+  };
+
   if (debts.length === 0) {
     return (
       <motion.div
@@ -93,18 +129,29 @@ export function DebtList({ debts, groupId, currentUserId }: DebtListProps) {
                       </div>
                     </div>
 
-                    {isDebtor && (
+                    {isDebtor ? (
                       <Button 
                         size="sm" 
                         className="h-9 rounded-xl font-black uppercase tracking-tighter gap-2 shrink-0"
                         asChild
                       >
                         <Link href={`/groups/${groupId}/settle?to=${debt.to.id}&amount=${debt.amount}`}>
+                          <Wallet className="h-4 w-4" />
                           Settle
-                          <ChevronRight className="h-3 w-3" />
                         </Link>
                       </Button>
-                    )}
+                    ) : debt.to.id === currentUserId ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9 rounded-xl font-black uppercase tracking-tighter gap-2 shrink-0 border-primary/20 hover:bg-primary/5"
+                        onClick={() => handleNudge(debt.from.id)}
+                        disabled={nudging === debt.from.id}
+                      >
+                        <BellRing className={cn("h-4 w-4", nudging === debt.from.id && "animate-bounce")} />
+                        Nudge
+                      </Button>
+                    ) : null}
                   </div>
                 </Card>
               </motion.div>
