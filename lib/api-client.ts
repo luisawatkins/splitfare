@@ -114,6 +114,12 @@ class ApiClient {
         }),
       }),
   };
+
+  notifications = {
+    list: () => this.request<any[]>('GET', '/notifications'),
+    markAsRead: (id: string) => this.request<void>('PATCH', `/notifications/${id}/read`),
+    markAllAsRead: () => this.request<void>('POST', '/notifications/read-all'),
+  };
 }
 
 export const apiClient = new ApiClient();
