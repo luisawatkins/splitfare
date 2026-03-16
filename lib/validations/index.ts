@@ -106,6 +106,26 @@ export const CreateSettlementSchema = SettlementSchema.omit({
   updated_at: true,
 });
 
+export const NotificationTypeEnum = z.enum([
+  'expense_added',
+  'settlement_sent',
+  'settlement_received',
+  'payment_reminder',
+  'group_invite',
+  'member_joined',
+]);
+
+export const NotificationSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string(),
+  type: NotificationTypeEnum,
+  title: z.string(),
+  message: z.string(),
+  data: z.record(z.any()),
+  is_read: z.boolean(),
+  created_at: z.string(),
+});
+
 export type User = z.infer<typeof UserSchema>;
 export type CreateUser = z.infer<typeof CreateUserSchema>;
 export type Group = z.infer<typeof GroupSchema>;
@@ -114,3 +134,4 @@ export type Expense = z.infer<typeof ExpenseSchema>;
 export type CreateExpense = z.infer<typeof CreateExpenseSchema>;
 export type Settlement = z.infer<typeof SettlementSchema>;
 export type CreateSettlement = z.infer<typeof CreateSettlementSchema>;
+export type Notification = z.infer<typeof NotificationSchema>;

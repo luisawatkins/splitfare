@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { CreateExpenseApiSchema, ExpenseFilterSchema } from '@/lib/validations/expense';
 import { z } from 'zod';
+import { notificationService } from '@/services/notification';
 
 
 const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
@@ -159,6 +160,37 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
         media_type: 'image',
         title: `Receipt for ${body.description}`,
       });
+    }
+
+    // Trigger notifications for all group members except the one who paid
+    const { data: members } = await supabaseAdmin
+      .from('group_members')
+      .select('user_id, groups(name), users!group_members_user_id_fkey(name)')
+      .eq('group_id', groupId);
+
+    if (members) {
+      const payerName = members.find(m => m.user_id === body.paidById)?.users?.name || 'Someone';
+      const groupName = (members[0]?.groups as any)?.name || 'the group';
+
+      const notificationPromises = members
+        .filter(m => m.user_id !== body.paidById)
+        .map(m => 
+          notificationService.createNotification({
+            userId: m.user_id,
+            type: 'expense_added',
+            title: 'New Expense',
+            message: `${payerName} added "${body.description}" to ${groupName}`,
+            data: {
+              groupId,
+              expenseId: expense.id,
+              groupName,
+              amount: body.amount,
+              currency: body.currency,
+            },
+          })
+        );
+      
+      Promise.all(notificationPromises).catch(err => console.error('Failed to send expense notifications:', err));
     }
 
     return createResponse(expense, 201);

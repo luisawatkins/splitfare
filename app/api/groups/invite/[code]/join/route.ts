@@ -1,6 +1,7 @@
 import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
+import { notificationService } from '@/services/notification';
 
 const joinGroupByInviteCode = async (req: AuthenticatedRequest, { params }: { params: { code: string } }) => {
   try {
@@ -39,6 +40,37 @@ const joinGroupByInviteCode = async (req: AuthenticatedRequest, { params }: { pa
     if (joinError) {
       console.error('Error joining group:', joinError);
       return createResponse({ error: 'Failed to join group' }, 500);
+    }
+
+    // Trigger notification for group members
+    const { data: members } = await supabaseAdmin
+      .from('group_members')
+      .select('user_id, groups(name), users!group_members_user_id_fkey(name)')
+      .eq('group_id', group.id);
+
+    if (members) {
+      const joinedUser = members.find(m => m.user_id === userId);
+      const joinedUserName = joinedUser?.users?.name || 'Someone';
+      const groupName = (members[0]?.groups as any)?.name || 'the group';
+
+      const notificationPromises = members
+        .filter(m => m.user_id !== userId)
+        .map(m => 
+          notificationService.createNotification({
+            userId: m.user_id,
+            type: 'member_joined',
+            title: 'New Member',
+            message: `${joinedUserName} joined ${groupName}`,
+            data: {
+              groupId: group.id,
+              groupName,
+              senderId: userId,
+              senderName: joinedUserName,
+            },
+          })
+        );
+      
+      Promise.all(notificationPromises).catch(err => console.error('Failed to send join notifications:', err));
     }
 
     return createResponse({ success: true, groupId: group.id }, 200);

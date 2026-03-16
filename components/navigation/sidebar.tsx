@@ -2,10 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, History, Plus, Search, User, Receipt, Users, Settings, LogOut } from "lucide-react";
+import { Home, History, Plus, Search, User, Receipt, Users, Settings, LogOut, Bell } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { usePrivy } from "@privy-io/react-auth";
 import { Button } from "@/components/ui/button";
+import { BellIcon } from "@/components/notifications/bell-icon";
 
 const SIDEBAR_ITEMS = [
   { label: "Dashboard", icon: Home, href: "/dashboard" },
@@ -23,11 +24,16 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-slate-950 border-r-2 border-slate-900 h-screen sticky top-0 p-8">
-      <div className="flex items-center gap-4 mb-14">
-        <div className="h-12 w-12 rounded-2xl bg-brand-pink flex items-center justify-center text-slate-950 font-black text-2xl border-2 border-slate-900 shadow-brutalist-sm">
-          S
+      <div className="flex items-center justify-between mb-14">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-brand-pink flex items-center justify-center text-slate-950 font-black text-2xl border-2 border-slate-900 shadow-brutalist-sm">
+            S
+          </div>
+          <span className="font-black text-2xl tracking-tighter uppercase text-slate-50">SplitFare</span>
         </div>
-        <span className="font-black text-2xl tracking-tighter uppercase text-slate-50">SplitFare</span>
+        <div className="text-slate-500">
+          <BellIcon />
+        </div>
       </div>
 
       <div className="flex-1 space-y-3">

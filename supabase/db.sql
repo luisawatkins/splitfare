@@ -96,6 +96,19 @@ CREATE TABLE public.shared_media (
   CONSTRAINT shared_media_expense_id_fkey FOREIGN KEY (expense_id) REFERENCES public.expenses(id),
   CONSTRAINT shared_media_uploader_id_fkey FOREIGN KEY (uploader_id) REFERENCES public.users(id)
 );
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id text NOT NULL,
+  type text NOT NULL, -- 'expense_added', 'settlement_sent', 'settlement_received', 'payment_reminder', 'group_invite', 'member_joined'
+  title text NOT NULL,
+  message text NOT NULL,
+  data jsonb, -- For storing relevant IDs like group_id, expense_id, etc.
+  is_read boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+
 CREATE TABLE public.users (
   id text NOT NULL DEFAULT gen_random_uuid(),
   email text NOT NULL UNIQUE,
