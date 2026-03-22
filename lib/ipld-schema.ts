@@ -30,7 +30,17 @@ export interface IPLDSettlement {
   currency: string;
   date: string;
   transactionHash?: string | null;
-  manifestCid?: CID | null; // Link to the settlement manifest on IPFS
+  manifestCid?: CID | null; 
+}
+
+export interface IPLDSharedMedia {
+  id: string;
+  uploaderId: string;
+  cid: CID;
+  mediaType: string;
+  title?: string | null;
+  expenseId?: string | null;
+  date: string;
 }
 
 export interface IPLDGroupBundle {
@@ -40,5 +50,6 @@ export interface IPLDGroupBundle {
   members: IPLDMember[];
   expenses: IPLDExpense[];
   settlements: IPLDSettlement[];
+  sharedMedia: IPLDSharedMedia[];
   version: string;
 }
