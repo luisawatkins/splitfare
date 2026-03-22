@@ -36,6 +36,9 @@ import { SettleView } from "@/components/settle-view";
 import { GroupExport } from "@/components/group-export";
 import { ShieldCheck } from "lucide-react";
 
+import { MediaGrid } from "@/components/media-grid";
+import { MediaUpload } from "@/components/media-upload";
+
 export default function GroupDetailsPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const router = useRouter();
@@ -74,6 +77,7 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
   const isLoading = groupLoading || membersLoading;
 
   const currentUserBalance = members?.find((m: any) => m.user?.id === currentUserId)?.balance || 0;
+  const isAdmin = members?.find((m: any) => m.user?.id === currentUserId)?.role === 'admin';
 
   const activities = [
     {
@@ -203,9 +207,13 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
               </div>
             )}
             {activeTab === "media" && (
-              <Card className="p-12 text-center border-2 border-dashed border-slate-800 bg-slate-900/30 rounded-[2.5rem] animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">Shared media and documents. Coming soon!</p>
-              </Card>
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-50">Shared Media</h2>
+                  <MediaUpload groupId={id} />
+                </div>
+                <MediaGrid groupId={id} isAdmin={isAdmin} />
+              </div>
             )}
             {activeTab === "export" && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
