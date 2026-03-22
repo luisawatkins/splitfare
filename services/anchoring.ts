@@ -19,14 +19,22 @@ export class AnchoringService {
 
   constructor(bundleService: GroupBundleService) {
     this.bundleService = bundleService;
-    this.provider = new JsonRpcProvider(RPC_URL);
     
-    if (!ANCHOR_PRIVATE_KEY) {
+    const rpcUrl = process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
+    const anchorKey = process.env.ANCHOR_PRIVATE_KEY;
+    const registryAddress = process.env.NEXT_PUBLIC_CID_REGISTRY_ADDRESS;
+
+    if (!anchorKey) {
       throw new Error('ANCHOR_PRIVATE_KEY is not configured');
     }
     
-    this.wallet = new Wallet(ANCHOR_PRIVATE_KEY, this.provider);
-    this.contract = new Contract(REGISTRY_ADDRESS, splitFareCIDRegistryAbi, this.wallet);
+    if (!registryAddress) {
+      throw new Error('NEXT_PUBLIC_CID_REGISTRY_ADDRESS is not configured');
+    }
+
+    this.provider = new JsonRpcProvider(rpcUrl);
+    this.wallet = new Wallet(anchorKey, this.provider);
+    this.contract = new Contract(registryAddress, splitFareCIDRegistryAbi, this.wallet);
   }
 
   async anchorAllGroups() {
