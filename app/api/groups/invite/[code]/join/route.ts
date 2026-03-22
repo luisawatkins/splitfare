@@ -1,6 +1,8 @@
 import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
+import { createServerStorachaService } from '@/lib/storacha-server';
+import { createDelegation } from '@/lib/delegation';
 import { notificationService } from '@/services/notification';
 
 const joinGroupByInviteCode = async (req: AuthenticatedRequest, { params }: { params: { code: string } }) => {
@@ -10,7 +12,7 @@ const joinGroupByInviteCode = async (req: AuthenticatedRequest, { params }: { pa
 
     const { data: group, error: groupError } = await supabaseAdmin
       .from('groups')
-      .select('id')
+      .select('id, space_did')
       .eq('invite_code', code)
       .single();
 
@@ -42,6 +44,34 @@ const joinGroupByInviteCode = async (req: AuthenticatedRequest, { params }: { pa
       return createResponse({ error: 'Failed to join group' }, 500);
     }
 
+    if (group.space_did) {
+      try {
+        const { data: userData } = await supabaseAdmin
+          .from('users')
+          .select('wallet_address')
+          .eq('id', userId)
+          .single();
+
+        if (userData?.wallet_address) {
+          const storacha = await createServerStorachaService();
+          const delegation = await createDelegation(
+            storacha,
+            group.space_did,
+            `did:pkh:eip155:1:${userData.wallet_address}`,
+            'member'
+          );
+
+          await supabaseAdmin
+            .from('group_members')
+            .update({ ucan_proof: delegation })
+            .eq('group_id', group.id)
+            .eq('user_id', userId);
+        }
+      } catch (delegationError) {
+        console.error('Graceful fallback: UCAN delegation failed during join:', delegationError);
+      }
+    }
+
     // Trigger notification for group members
     const { data: members } = await supabaseAdmin
       .from('group_members')
@@ -50,7 +80,7 @@ const joinGroupByInviteCode = async (req: AuthenticatedRequest, { params }: { pa
 
     if (members) {
       const joinedUser = members.find(m => m.user_id === userId);
-      const joinedUserName = joinedUser?.users?.name || 'Someone';
+      const joinedUserName = (joinedUser?.users as any)?.name || 'Someone';
       const groupName = (members[0]?.groups as any)?.name || 'the group';
 
       const notificationPromises = members

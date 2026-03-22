@@ -84,6 +84,16 @@ const leaveGroup = async (req: AuthenticatedRequest, { params }: { params: { id:
       return createResponse({ error: 'Failed to leave group' }, 400);
     }
 
+    try {
+      await supabaseAdmin
+        .from('group_members')
+        .update({ ucan_proof: null })
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+    } catch (revokeError) {
+      console.error('Failed to revoke UCAN delegation during leave:', revokeError);
+    }
+
     return createResponse({ success: true, message: 'Left group successfully' });
   } catch (error) {
     console.error('Error in POST /api/groups/[id]/members/leave:', error);

@@ -55,6 +55,7 @@ CREATE TABLE public.group_members (
   user_id text NOT NULL,
   role USER-DEFINED NOT NULL DEFAULT 'member'::role,
   joined_at timestamp with time zone NOT NULL DEFAULT now(),
+  ucan_proof jsonb,
   CONSTRAINT group_members_pkey PRIMARY KEY (id),
   CONSTRAINT group_members_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
   CONSTRAINT group_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)

@@ -1,6 +1,8 @@
 import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
+import { createServerStorachaService } from '@/lib/storacha-server';
+import { createDelegation } from '@/lib/delegation';
 
 
 const updateMember = async (req: AuthenticatedRequest & { validatedBody?: any }, { params }: { params: { id: string; userId: string } }) => {
@@ -109,8 +111,18 @@ const removeMember = async (req: AuthenticatedRequest, { params }: { params: { i
       .eq('user_id', targetUserId);
 
     if (deleteError) {
-      return createResponse({ error: 'Failed to remove member' }, 400);
-    }
+        return createResponse({ error: 'Failed to remove member' }, 400);
+      }
+
+      try {
+        await supabaseAdmin
+          .from('group_members')
+          .update({ ucan_proof: null })
+          .eq('group_id', groupId)
+          .eq('user_id', targetUserId);
+      } catch (revokeError) {
+        console.error('Failed to revoke UCAN delegation during removal:', revokeError);
+      }
 
 
     return createResponse({ success: true, message: 'Member removed' });

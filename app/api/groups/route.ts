@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { nanoid } from 'nanoid';
 import { createServerStorachaService } from '@/lib/storacha-server';
+import { createDelegation } from '@/lib/delegation';
 import { sendEmail } from '@/lib/email';
 import { GroupCreatedEmail } from '@/components/email/GroupCreatedEmail';
 import * as React from 'react';
@@ -92,6 +93,31 @@ const createGroup = async (req: AuthenticatedRequest & { validatedBody: any }) =
           .eq('id', group.id);
         
         group.space_did = spaceDid;
+
+        try {
+          const { data: userData } = await supabaseAdmin
+            .from('users')
+            .select('wallet_address')
+            .eq('id', userId)
+            .single();
+
+          if (userData?.wallet_address) {
+            const delegation = await createDelegation(
+              storacha,
+              spaceDid,
+              `did:pkh:eip155:1:${userData.wallet_address}`,
+              'owner'
+            );
+
+            await supabaseAdmin
+              .from('group_members')
+              .update({ ucan_proof: delegation })
+              .eq('group_id', group.id)
+              .eq('user_id', userId);
+          }
+        } catch (delegationError) {
+          console.error('Failed to delegate access to creator:', delegationError);
+        }
       }
     } catch (storachaError) {
       console.error('Error creating Storacha space:', storachaError);
