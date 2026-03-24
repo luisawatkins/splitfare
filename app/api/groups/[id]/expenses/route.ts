@@ -36,15 +36,23 @@ const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { i
 
     const validatedFilters = ExpenseFilterSchema.parse(filterParams);
 
-    let query = supabaseAdmin
-      .from('expenses')
-      .select(`
-        *,
-        paidBy:users!expenses_created_by_fkey(id, name, avatar_url),
-        splits:expense_splits(id, user_id, amount_owed, percentage_owed, shares)
-      `)
-      .eq('group_id', groupId)
-      .is('deleted_at', null);
+    const baseSelect = `
+      *,
+      paidBy:users!expenses_created_by_fkey(id, name, avatar_url),
+      splits:expense_splits(id, user_id, amount_owed, percentage_owed, shares)
+    `;
+    const buildQuery = (withSoftDeleteFilter: boolean) => {
+      let q = supabaseAdmin
+        .from('expenses')
+        .select(baseSelect)
+        .eq('group_id', groupId);
+      if (withSoftDeleteFilter) {
+        q = q.is('deleted_at', null);
+      }
+      return q;
+    };
+
+    let query = buildQuery(true);
 
     if (validatedFilters.category) {
       query = query.eq('category', validatedFilters.category);
@@ -73,7 +81,40 @@ const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { i
       })
       .limit(validatedFilters.limit + 1); 
 
-    const { data: expenses, error: fetchError } = await query;
+    let { data: expenses, error: fetchError } = await query;
+
+    if (fetchError && (fetchError as any).code === '42703') {
+      query = buildQuery(false);
+
+      if (validatedFilters.category) {
+        query = query.eq('category', validatedFilters.category);
+      }
+      if (validatedFilters.paidBy) {
+        query = query.eq('created_by', validatedFilters.paidBy);
+      }
+      if (validatedFilters.startDate) {
+        query = query.gte('created_at', validatedFilters.startDate);
+      }
+      if (validatedFilters.endDate) {
+        query = query.lte('created_at', validatedFilters.endDate);
+      }
+      if (validatedFilters.cursor) {
+        if (validatedFilters.sortOrder === 'desc') {
+          query = query.lt('created_at', validatedFilters.cursor);
+        } else {
+          query = query.gt('created_at', validatedFilters.cursor);
+        }
+      }
+      query = query
+        .order(validatedFilters.sortBy === 'date' ? 'created_at' : 'total_amount', {
+          ascending: validatedFilters.sortOrder === 'asc',
+        })
+        .limit(validatedFilters.limit + 1);
+
+      const fallback = await query;
+      expenses = fallback.data;
+      fetchError = fallback.error;
+    }
 
     if (fetchError) {
       console.error('Error fetching expenses:', fetchError);

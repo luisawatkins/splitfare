@@ -67,7 +67,7 @@ const getBalances = async (req: AuthenticatedRequest, { params }: { params: { id
     }
 
     // 2. Fetch all expenses and splits for the group
-    const { data: expenses, error: expensesError } = await supabaseAdmin
+    let { data: expenses, error: expensesError } = await supabaseAdmin
       .from('expenses')
       .select(`
         id,
@@ -77,6 +77,20 @@ const getBalances = async (req: AuthenticatedRequest, { params }: { params: { id
       `)
       .eq('group_id', groupId)
       .is('deleted_at', null);
+
+    if (expensesError && (expensesError as any).code === '42703') {
+      const fallback = await supabaseAdmin
+        .from('expenses')
+        .select(`
+          id,
+          created_by,
+          total_amount,
+          splits:expense_splits(user_id, amount_owed)
+        `)
+        .eq('group_id', groupId);
+      expenses = fallback.data as any;
+      expensesError = fallback.error as any;
+    }
 
     if (expensesError) {
       return createResponse({ error: 'Failed to fetch expenses' }, 400);

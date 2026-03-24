@@ -36,10 +36,20 @@ export default function DashboardPage() {
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["all-memberships"],
     queryFn: async () => {
+      const token = await getAccessToken();
+      if (!token) {
+        return [];
+      }
+
+      apiClient.setToken(token);
       const groups = await apiClient.groups.list();
       const memberships = await Promise.all(
         groups.map(async (group) => {
-          const res = await fetch(`/api/groups/${group.id}/members`);
+          const res = await fetch(`/api/groups/${group.id}/members`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
           const result = await res.json();
           const userMembership = result.data.find((m: any) => m.user.id === currentUserId);
           return {

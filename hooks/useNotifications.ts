@@ -1,65 +1,69 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '@/lib/api-client';
-import { Notification } from '@/lib/validations';
+import { useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePrivy } from "@privy-io/react-auth";
+import { apiClient } from "@/lib/api-client";
+import { Notification } from "@/lib/validations";
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { authenticated, ready, getAccessToken } = usePrivy();
+  const queryClient = useQueryClient();
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const result = await apiClient.notifications.list();
-      setNotifications(result);
-      setUnreadCount(result.filter((n: Notification) => !n.is_read).length);
-    } catch (err) {
-      console.error('Error fetching notifications:', err);
-      setError('An error occurred while fetching notifications');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const fetchNotifications = useCallback(async (): Promise<Notification[]> => {
+    if (!authenticated) return [];
 
-  const markAsRead = async (id: string) => {
-    try {
+    const token = await getAccessToken();
+    if (!token) return [];
+
+    apiClient.setToken(token);
+    return apiClient.notifications.list();
+  }, [authenticated, getAccessToken]);
+
+  const notificationsQuery = useQuery<Notification[]>({
+    queryKey: ["notifications"],
+    queryFn: fetchNotifications,
+    enabled: ready,
+    refetchInterval: authenticated ? 30000 : false,
+    refetchOnWindowFocus: false,
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = await getAccessToken();
+      if (!token) return;
+
+      apiClient.setToken(token);
       await apiClient.notifications.markAsRead(id);
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (err) {
-      console.error('Error marking notification as read:', err);
-    }
-  };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
 
-  const markAllAsRead = async () => {
-    try {
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+
+      apiClient.setToken(token);
       await apiClient.notifications.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      console.error('Error marking all notifications as read:', err);
-    }
-  };
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
 
-  useEffect(() => {
-    fetchNotifications();
-
-    // Polling for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  const notifications = notificationsQuery.data ?? [];
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return {
     notifications,
     unreadCount,
-    isLoading,
-    error,
-    markAsRead,
-    markAllAsRead,
-    refresh: fetchNotifications,
+    isLoading: notificationsQuery.isLoading,
+    error: notificationsQuery.error instanceof Error ? notificationsQuery.error.message : null,
+    markAsRead: (id: string) => markAsReadMutation.mutateAsync(id),
+    markAllAsRead: () => markAllAsReadMutation.mutateAsync(),
+    refresh: () => notificationsQuery.refetch(),
   };
 }
