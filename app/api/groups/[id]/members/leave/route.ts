@@ -25,22 +25,42 @@ const leaveGroup = async (req: AuthenticatedRequest, { params }: { params: { id:
     }
 
 
-    const { data: totalPaidData, error: paidError } = await supabaseAdmin
+    let { data: totalPaidData, error: paidError } = await supabaseAdmin
       .from('expenses')
       .select('total_amount')
       .eq('group_id', groupId)
       .eq('created_by', userId)
       .is('deleted_at', null);
 
+    if (paidError && (paidError as any).code === '42703') {
+      const fallbackPaid = await supabaseAdmin
+        .from('expenses')
+        .select('total_amount')
+        .eq('group_id', groupId)
+        .eq('created_by', userId);
+      totalPaidData = fallbackPaid.data;
+      paidError = fallbackPaid.error;
+    }
+
     if (paidError) throw paidError;
     const totalPaid = totalPaidData?.reduce((sum, exp) => sum + Number(exp.total_amount), 0) || 0;
 
-    const { data: totalOwedData, error: owedError } = await supabaseAdmin
+    let { data: totalOwedData, error: owedError } = await supabaseAdmin
       .from('expense_splits')
       .select('amount_owed, expenses!inner(group_id, deleted_at)')
       .eq('user_id', userId)
       .eq('expenses.group_id', groupId)
       .is('expenses.deleted_at', null);
+
+    if (owedError && (owedError as any).code === '42703') {
+      const fallbackOwed = await supabaseAdmin
+        .from('expense_splits')
+        .select('amount_owed, expenses!inner(group_id)')
+        .eq('user_id', userId)
+        .eq('expenses.group_id', groupId);
+      totalOwedData = fallbackOwed.data as any;
+      owedError = fallbackOwed.error as any;
+    }
 
     if (owedError) throw owedError;
     const totalOwed = totalOwedData?.reduce((sum, split) => sum + Number(split.amount_owed), 0) || 0;

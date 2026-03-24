@@ -41,7 +41,7 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
       return createResponse({ error: 'Failed to fetch members' }, 500);
     }
 
-    const { data: expenses, error: expensesError } = await supabaseAdmin
+    let { data: expenses, error: expensesError } = await supabaseAdmin
       .from('expenses')
       .select(`
         id,
@@ -51,6 +51,20 @@ const getGroupMembers = async (req: AuthenticatedRequest, { params }: { params: 
       `)
       .eq('group_id', groupId)
       .is('deleted_at', null);
+
+    if (expensesError && (expensesError as any).code === '42703') {
+      const fallback = await supabaseAdmin
+        .from('expenses')
+        .select(`
+          id,
+          total_amount,
+          created_by,
+          splits:expense_splits(user_id, amount_owed)
+        `)
+        .eq('group_id', groupId);
+      expenses = fallback.data as any;
+      expensesError = fallback.error as any;
+    }
 
     if (expensesError) {
       console.error('Error fetching expenses for balance:', expensesError);

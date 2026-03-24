@@ -7,9 +7,20 @@ import { WelcomeScreen } from "./welcome-screen";
 
 export function ServiceWorkerRegister() {
   const [isRegistered, setIsRegistered] = useState(false);
+  const isProd = process.env.NODE_ENV === "production";
 
   useEffect(() => {
+    if (!isProd && typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => {
+          void registration.unregister();
+        });
+      });
+      return;
+    }
+
     if (
+      isProd &&
       typeof window !== "undefined" &&
       "serviceWorker" in navigator &&
       !isRegistered &&
@@ -42,7 +53,7 @@ export function ServiceWorkerRegister() {
         window.addEventListener("load", register, { once: true });
       }
     }
-  }, [isRegistered]);
+  }, [isRegistered, isProd]);
 
   return (
     <>

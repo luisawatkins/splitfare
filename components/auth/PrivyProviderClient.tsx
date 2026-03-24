@@ -1,10 +1,15 @@
- "use client";
+"use client";
 
-import React from "react";
-import { PrivyProvider } from "@privy-io/react-auth";
+import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
+
+const PrivyProvider = dynamic(
+  () => import("@privy-io/react-auth").then((mod) => mod.PrivyProvider),
+  { ssr: false }
+);
 
 type Props = {
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export function PrivyProviderClient(props: Props) {
@@ -14,13 +19,13 @@ export function PrivyProviderClient(props: Props) {
       config={{
         appearance: {
           theme: "light",
-          accentColor: "#ff6ad5"
+          accentColor: "#ff6ad5",
         },
         embeddedWallets: {
           ethereum: {
-            createOnLogin: "users-without-wallets"
-          }
-        }
+            createOnLogin: "users-without-wallets",
+          },
+        },
       }}
     >
       {props.children}

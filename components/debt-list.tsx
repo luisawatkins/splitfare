@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { useState } from "react";
-import { toast } from "@/components/ui/toast";
+import { useToast } from "@/components/ui/toast";
 
 export interface Debt {
   from: { id: string; name: string };
@@ -25,6 +25,7 @@ interface DebtListProps {
 
 export function DebtList({ debts, groupId, currentUserId }: DebtListProps) {
   const [nudging, setNudging] = useState<string | null>(null);
+  const { notify } = useToast();
 
   const handleNudge = async (receiverId: string) => {
     try {
@@ -35,23 +36,23 @@ export function DebtList({ debts, groupId, currentUserId }: DebtListProps) {
       const result = await response.json();
 
       if (result.success) {
-        toast({
+        notify({
           title: "Nudge sent!",
           description: "We've sent a reminder to settle the debt.",
         });
       } else {
-        toast({
+        notify({
           title: "Could not send nudge",
           description: result.error || "Please try again later.",
-          variant: "destructive",
+          variant: "error",
         });
       }
     } catch (err) {
       console.error('Error sending nudge:', err);
-      toast({
+      notify({
         title: "Error",
         description: "An unexpected error occurred.",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setNudging(null);
