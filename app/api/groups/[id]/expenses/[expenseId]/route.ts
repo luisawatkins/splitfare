@@ -19,18 +19,39 @@ const getExpenseDetail = async (req: AuthenticatedRequest, { params }: { params:
       return createResponse({ error: 'Access denied' }, 403);
     }
 
-    const { data: expense, error: fetchError } = await supabaseAdmin
-      .from('expenses')
-      .select(`
-        *,
-        paidBy:users!expenses_created_by_fkey(id, name, avatar_url),
-        splits:expense_splits(id, user_id, amount_owed, percentage_owed, shares, user:users(id, name, avatar_url)),
-        receipts:shared_media(cid, media_type, title)
-      `)
-      .eq('id', expenseId)
-      .eq('group_id', groupId)
-      .is('deleted_at', null)
-      .single();
+    const detailSelect = `
+      *,
+      paidBy:users!expenses_created_by_fkey(id, name, avatar_url),
+      splits:expense_splits(
+        id,
+        user_id,
+        amount_owed,
+        percentage_owed,
+        shares,
+        user:users!expense_splits_user_id_fkey(id, name, avatar_url)
+      ),
+      receipts:shared_media(cid, media_type, title)
+    `;
+
+    const runDetailQuery = (filterDeleted: boolean) => {
+      let q = supabaseAdmin
+        .from('expenses')
+        .select(detailSelect)
+        .eq('id', expenseId)
+        .eq('group_id', groupId);
+      if (filterDeleted) {
+        q = q.is('deleted_at', null);
+      }
+      return q.single();
+    };
+
+    let { data: expense, error: fetchError } = await runDetailQuery(true);
+
+    if (fetchError && (fetchError as { code?: string }).code === '42703') {
+      const retry = await runDetailQuery(false);
+      expense = retry.data;
+      fetchError = retry.error;
+    }
 
     if (fetchError || !expense) {
       return createResponse({ error: 'Expense not found' }, 404);
