@@ -11,8 +11,15 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
+function paramToString(v: string | string[] | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
+
 export default function ExpenseDetailPage() {
-  const { id: groupId, expenseId } = useParams();
+  const params = useParams();
+  const groupId = paramToString(params.id);
+  const expenseId = paramToString(params.expenseId);
   const router = useRouter();
   const { notify } = useToast();
   const queryClient = useQueryClient();
@@ -29,7 +36,13 @@ export default function ExpenseDetailPage() {
         },
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to fetch expense");
+      if (!res.ok) {
+        const msg =
+          typeof result?.error === "string"
+            ? result.error
+            : result?.error?.message ?? result?.data?.error ?? "Failed to fetch expense";
+        throw new Error(msg);
+      }
       return result.data;
     },
     enabled: !!groupId && !!expenseId && !!privyUser,
