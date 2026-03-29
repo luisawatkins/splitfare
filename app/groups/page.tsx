@@ -5,17 +5,34 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import { Plus, Users, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { GroupListSkeleton } from "@/components/loading-states/group-loading";
+import { usePrivy } from "@privy-io/react-auth";
+import {
+  resolvePrivyAccessToken,
+  SIGN_IN_REQUIRED,
+} from "@/lib/privy-token";
 
 export default function GroupsPage() {
   const router = useRouter();
-  const { data: groups, isLoading } = useQuery({
+  const { ready, getAccessToken } = usePrivy();
+  const { data: groups, isLoading, error, refetch } = useQuery({
     queryKey: ["groups"],
-    queryFn: () => apiClient.groups.list(),
+    queryFn: async () => {
+      const token = await resolvePrivyAccessToken(getAccessToken);
+      if (!token) {
+        throw new Error(SIGN_IN_REQUIRED);
+      }
+      apiClient.setToken(token);
+      return apiClient.groups.list();
+    },
+    enabled: ready,
+    retry: (_, err) =>
+      err instanceof Error && err.message === SIGN_IN_REQUIRED ? false : true,
   });
 
   if (isLoading) {
@@ -23,6 +40,35 @@ export default function GroupsPage() {
       <div className="container max-w-2xl py-8 space-y-4">
         <div className="h-8 w-48 bg-muted animate-pulse rounded" />
         <GroupListSkeleton count={4} />
+      </div>
+    );
+  }
+
+  if (error instanceof Error && error.message === SIGN_IN_REQUIRED) {
+    return (
+      <div className="container max-w-2xl py-12 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Sign in required</h1>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Load your groups after signing in. Refresh the page, or return home and open the app again.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Button variant="outline" onClick={() => refetch()}>
+            Retry
+          </Button>
+          <Button asChild>
+            <Link href="/">Back to home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container max-w-2xl py-12 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Could not load groups</h1>
+        <p className="text-muted-foreground">{error.message}</p>
+        <Button onClick={() => refetch()}>Try again</Button>
       </div>
     );
   }
