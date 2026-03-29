@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateGroupSchema, GroupCategoryEnum } from "@/lib/validations";
@@ -13,13 +14,16 @@ import { getBrowserStorachaService } from "@/lib/storacha";
 import { cn } from "@/lib/cn";
 import { z } from "zod";
 import { usePrivy } from "@privy-io/react-auth";
+import { apiClient } from "@/lib/api-client";
+import type { CreateGroup } from "@/lib/validations";
 
 type FormData = z.input<typeof CreateGroupSchema>;
 
 export function GroupForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { notify } = useToast();
-  const { getAccessToken } = usePrivy();
+  const { ready, getAccessToken } = usePrivy();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -51,9 +55,33 @@ export function GroupForm() {
   };
 
   const onSubmit = async (data: FormData) => {
+    if (!ready) {
+      notify({
+        title: "One moment",
+        description: "Still connecting your session. Try again in a second.",
+        variant: "error",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      let avatarUrl = null;
+      let token = await getAccessToken();
+      if (!token && typeof window !== "undefined") {
+        token = sessionStorage.getItem("api_token");
+      }
+      if (!token) {
+        notify({
+          title: "Sign in required",
+          description: "Refresh the page or sign in again to create a group.",
+          variant: "error",
+        });
+        return;
+      }
+
+      apiClient.setToken(token);
+
+      let avatarUrl: string | null = null;
 
       if (avatarFile) {
         const storacha = await getBrowserStorachaService();
@@ -61,32 +89,27 @@ export function GroupForm() {
         avatarUrl = storacha.gatewayUrl(cid);
       }
 
-      const token = await getAccessToken();
+      const payload: CreateGroup = {
+        name: data.name,
+        description: data.description || null,
+        category: data.category,
+        currency: data.currency ?? "USDC",
+        avatar_url: avatarUrl,
+      };
 
-      const response = await fetch("/api/groups", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token || ""}`,
-        },
-        body: JSON.stringify({
-          ...data,
-          avatar_url: avatarUrl,
-        }),
-      });
+      const group = await apiClient.groups.create(payload);
 
-      if (!response.ok) {
-        throw new Error("Failed to create group");
-      }
-
-      const result = await response.json();
       notify({
         title: "Success",
         description: "Group created successfully!",
         variant: "success",
       });
 
-      router.push(`/groups/${result.data.id}`);
+      if (group?.id) {
+        await queryClient.invalidateQueries({ queryKey: ["groups"] });
+        await queryClient.invalidateQueries({ queryKey: ["group", group.id] });
+        router.push(`/groups/${group.id}`);
+      }
     } catch (error) {
       console.error("Error creating group:", error);
       notify({

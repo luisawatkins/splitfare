@@ -62,6 +62,8 @@ const createGroup = async (req: AuthenticatedRequest & { validatedBody: any }) =
 
     if (memberError) {
       console.error('Error adding creator to group:', memberError);
+      await supabaseAdmin.from('groups').delete().eq('id', group.id);
+      return createResponse({ error: 'Failed to add you as a member of this group' }, 500);
     }
 
     const { data: creator } = await supabaseAdmin
