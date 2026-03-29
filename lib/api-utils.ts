@@ -12,15 +12,24 @@ declare global {
 
 if (!privyAppId || !privyAppSecret) {
   if (!globalThis.__splitfarePrivyEnvWarned) {
-    console.warn("Privy environment variables are not configured. Authentication will fail.");
+    console.warn(
+      "PRIVY_APP_SECRET (and app id) are not set. API auth falls back to unsigned JWT decode only — use Privy verify in production."
+    );
     globalThis.__splitfarePrivyEnvWarned = true;
   }
 }
 
-const privy = new PrivyClient({
-  appId: privyAppId || "",
-  appSecret: privyAppSecret || ""
-});
+function getServerPrivyClient(): PrivyClient | null {
+  if (!privyAppId || !privyAppSecret) {
+    return null;
+  }
+  const jwtVerificationKey = process.env.PRIVY_JWT_VERIFICATION_KEY;
+  return new PrivyClient({
+    appId: privyAppId,
+    appSecret: privyAppSecret,
+    ...(jwtVerificationKey ? { jwtVerificationKey } : {}),
+  });
+}
 
 export type ApiResponse<T = any> = {
   success: true;
@@ -99,15 +108,40 @@ export const withAuth = (handler: ApiHandler<AuthenticatedRequest>) => {
         throw new AuthenticationError('Missing or invalid authorization header');
       }
 
-      const token = authHeader.split(' ')[1];
-      
-      // Manual JWT verification as fallback
-      const payload = jose.decodeJwt(token);
-      
+      const token = authHeader.slice('Bearer '.length).trim();
+      if (!token || token === 'undefined' || token === 'null') {
+        throw new AuthenticationError('Missing or invalid authorization header');
+      }
+
       const authReq = req as AuthenticatedRequest;
-      authReq.user = {
-        id: payload.sub as string,
-      };
+      const privy = getServerPrivyClient();
+
+      if (privy) {
+        try {
+          const verified = await privy.utils().auth().verifyAccessToken(token);
+          authReq.user = { id: verified.user_id };
+        } catch (err) {
+          const msg =
+            err instanceof Error ? err.message : 'Invalid authentication token';
+          throw new AuthenticationError(msg);
+        }
+      } else {
+        try {
+          const payload = jose.decodeJwt(token);
+          const sub = payload.sub;
+          if (!sub || typeof sub !== 'string') {
+            throw new AuthenticationError('Invalid token payload');
+          }
+          authReq.user = { id: sub };
+        } catch (err) {
+          if (err instanceof AuthenticationError) {
+            throw err;
+          }
+          const msg =
+            err instanceof Error ? err.message : 'Invalid JWT';
+          throw new AuthenticationError(msg);
+        }
+      }
 
       return await handler(authReq, context);
     } catch (error) {

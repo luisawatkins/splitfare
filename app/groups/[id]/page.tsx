@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
@@ -8,29 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { InviteShare } from "@/components/invite-share";
-import { MemberList } from "@/components/member-list";
 import { ExpenseList } from "@/components/expense-list";
 import { BalanceView } from "@/components/balance-view";
 import { BalanceSummary } from "@/components/balance-summary";
-import { ActivityFeed } from "@/components/activity-feed";
 import { QuickActions } from "@/components/quick-actions";
 import { cn } from "@/lib/cn";
-import { 
-  Loader2, 
-  ArrowLeft, 
-  Settings, 
-  Users, 
-  Receipt, 
+import {
+  ArrowLeft,
+  Settings,
+  Receipt,
   Wallet,
-  Calendar,
   Image as ImageIcon,
   History,
-  Download
+  Download,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { toDbUserId } from "@/lib/privy-utils";
+import {
+  resolvePrivyAccessToken,
+  SIGN_IN_REQUIRED,
+} from "@/lib/privy-token";
 import { GroupDetailsSkeleton } from "@/components/loading-states/group-loading";
 import { SettleView } from "@/components/settle-view";
 import { GroupExport } from "@/components/group-export";
@@ -39,42 +38,82 @@ import { ShieldCheck } from "lucide-react";
 import { MediaGrid } from "@/components/media-grid";
 import { MediaUpload } from "@/components/media-upload";
 
-export default function GroupDetailsPage({ params }: { params: { id: string } }) {
-  const { id } = params;
-  const router = useRouter();
-  const { user: privyUser, getAccessToken } = usePrivy();
+function paramToString(v: string | string[] | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
+
+export default function GroupDetailsPage() {
+  const params = useParams();
+  const id = paramToString(params.id);
+  const { ready, user: privyUser, getAccessToken } = usePrivy();
   const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
   const [activeTab, setActiveTab] = useState("expenses");
 
   const { data: group, isLoading: groupLoading, error } = useQuery({
     queryKey: ["group", id],
     queryFn: async () => {
-      const token = await getAccessToken();
-      if (token) {
-        apiClient.setToken(token);
+      const token = await resolvePrivyAccessToken(getAccessToken);
+      if (!token) {
+        throw new Error(SIGN_IN_REQUIRED);
       }
-      return apiClient.groups.get(id);
+      apiClient.setToken(token);
+      const g = await apiClient.groups.get(id);
+      if (
+        g &&
+        typeof g === "object" &&
+        "error" in g &&
+        !("name" in (g as Record<string, unknown>))
+      ) {
+        return null;
+      }
+      return g;
     },
-    enabled: !!id && !!privyUser,
+    enabled: !!id && ready,
+    retry: (_, err) =>
+      err instanceof Error && err.message === SIGN_IN_REQUIRED ? false : true,
   });
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["group-members", id],
     queryFn: async () => {
-      const token = await getAccessToken();
+      const token = await resolvePrivyAccessToken(getAccessToken);
+      if (!token) {
+        throw new Error(SIGN_IN_REQUIRED);
+      }
       const res = await fetch(`/api/groups/${id}/members`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed to fetch members");
+      if (!res.ok || result.success === false) {
+        const msg =
+          typeof result.error === "string"
+            ? result.error
+            : result.error?.message ?? "Failed to fetch members";
+        throw new Error(msg);
+      }
       return result.data;
     },
-    enabled: !!id && !!privyUser,
+    enabled: !!id && ready,
+    retry: (_, err) =>
+      err instanceof Error && err.message === SIGN_IN_REQUIRED ? false : true,
   });
 
   const isLoading = groupLoading || membersLoading;
+
+  if (!id) {
+    return (
+      <div className="container max-w-2xl py-12 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Invalid group link</h1>
+        <p className="text-muted-foreground">This URL is missing a group id.</p>
+        <Button asChild>
+          <Link href="/groups">Back to Groups</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const currentUserBalance = members?.find((m: any) => m.user?.id === currentUserId)?.balance || 0;
   const isAdmin = members?.find((m: any) => m.user?.id === currentUserId)?.role === 'admin';
@@ -100,6 +139,20 @@ export default function GroupDetailsPage({ params }: { params: { id: string } })
 
   if (isLoading) {
     return <GroupDetailsSkeleton />;
+  }
+
+  if (error instanceof Error && error.message === SIGN_IN_REQUIRED) {
+    return (
+      <div className="container max-w-2xl py-12 text-center space-y-4">
+        <h1 className="text-2xl font-bold">Sign in required</h1>
+        <p className="text-muted-foreground">
+          Your session has no access token. Refresh the page or open the app from the home screen and sign in again.
+        </p>
+        <Button asChild>
+          <Link href="/">Back to home</Link>
+        </Button>
+      </div>
+    );
   }
 
   if (error || !group) {
