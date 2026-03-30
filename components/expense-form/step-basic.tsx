@@ -18,17 +18,15 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Tag, Utensils, Car, Home, Music, ShoppingBag, Zap, Plane } from "lucide-react";
+import { Tag, Utensils, Car, Home, Zap, Plane } from "lucide-react";
 
-const categoryIcons: Record<string, any> = {
-  general: Tag,
+const categoryIcons: Record<string, typeof Tag> = {
+  other: Tag,
   food: Utensils,
   transport: Car,
-  housing: Home,
-  entertainment: Music,
-  shopping: ShoppingBag,
-  utilities: Zap,
+  accommodation: Home,
   travel: Plane,
+  subscription: Zap,
 };
 
 interface StepBasicProps {

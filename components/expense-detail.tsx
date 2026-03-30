@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/currency";
 import { CATEGORIES } from "@/lib/validations/expense";
-import { 
-  Tag, Utensils, Car, Home, Music, 
-  ShoppingBag, Zap, Plane, Calendar,
+import {
+  Tag, Utensils, Car, Home, Zap, Plane, Calendar,
   Clock, Receipt, ExternalLink, Copy,
   Check, Edit2, Trash2, Wallet,
   ChevronRight, ArrowUpRight
@@ -20,15 +19,13 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
 
-const categoryIcons: Record<string, any> = {
-  general: Tag,
+const categoryIcons: Record<string, typeof Tag> = {
+  other: Tag,
   food: Utensils,
   transport: Car,
-  housing: Home,
-  entertainment: Music,
-  shopping: ShoppingBag,
-  utilities: Zap,
+  accommodation: Home,
   travel: Plane,
+  subscription: Zap,
 };
 
 interface ExpenseDetailProps {

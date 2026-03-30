@@ -59,44 +59,51 @@ export function InviteShare({ inviteCode, groupName }: InviteShareProps) {
   };
 
   return (
-    <Card className="p-6 space-y-4">
-      <div className="space-y-1">
-        <h3 className="font-semibold text-lg">Invite Members</h3>
-        <p className="text-sm text-muted-foreground">
+    <Card className="w-full space-y-4 border-2 border-slate-200 bg-white p-6 text-slate-900 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50">
+      <div className="space-y-1.5">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+          Invite members
+        </h3>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Share this link with your friends to join the group.
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+        <div className="relative min-w-0 flex-1">
           <Input
             value={inviteLink}
             readOnly
-            className="pr-10 bg-muted/50"
+            className="h-11 border-slate-200 bg-slate-50 pr-10 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
           <button
+            type="button"
             onClick={copyToClipboard}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
           >
             {hasCopied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
           </button>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setIsQrModalOpen(true)}
-          title="Show QR Code"
-        >
-          <QrCodeIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="default"
-          size="icon"
-          onClick={shareNative}
-          title="Share Link"
-        >
-          <Share2 className="h-4 w-4" />
-        </Button>
+        <div className="flex shrink-0 gap-2 sm:gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-11 w-11 border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
+            onClick={() => setIsQrModalOpen(true)}
+            title="Show QR Code"
+          >
+            <QrCodeIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="default"
+            size="icon"
+            className="h-11 w-11 shrink-0"
+            onClick={shareNative}
+            title="Share Link"
+          >
+            <Share2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <Modal

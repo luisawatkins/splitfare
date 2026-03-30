@@ -10,33 +10,29 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Tag, 
-  Utensils, 
-  Car, 
-  Home, 
-  Music, 
-  ShoppingBag, 
-  Zap, 
-  Plane, 
-  Calendar, 
-  CreditCard, 
+import {
+  Tag,
+  Utensils,
+  Car,
+  Home,
+  Zap,
+  Plane,
+  Calendar,
+  CreditCard,
   Users,
-  Image as ImageIcon
+  Image as ImageIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/cn";
 import { ReceiptViewer } from "@/components/receipt-viewer";
 
-const categoryIcons: Record<string, any> = {
-  general: Tag,
+const categoryIcons: Record<string, typeof Tag> = {
+  other: Tag,
   food: Utensils,
   transport: Car,
-  housing: Home,
-  entertainment: Music,
-  shopping: ShoppingBag,
-  utilities: Zap,
+  accommodation: Home,
   travel: Plane,
+  subscription: Zap,
 };
 
 interface StepReviewProps {

@@ -31,12 +31,12 @@ export function QuickActions({ groupId }: QuickActionsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-4 md:gap-5">
       {actions.map((action) => (
-        <Link key={action.label} href={action.href} className="block">
+        <Link key={action.label} href={action.href} className="block min-w-0">
           <Button
             variant="ghost"
-            className={`w-full flex flex-col items-center gap-2 h-auto py-4 rounded-2xl transition-all duration-300 shadow-sm border border-border/50 hover:shadow-md hover:scale-[1.02] ${action.className}`}
+            className={`flex h-auto w-full min-w-0 flex-col items-center gap-2 rounded-2xl border border-border/50 py-4 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md ${action.className}`}
           >
             <div className="bg-white/20 p-2 rounded-xl">
               {action.icon}
