@@ -98,7 +98,7 @@ export default function ExpenseDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="container max-w-2xl py-8 space-y-8 animate-in fade-in duration-500">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8 space-y-8 animate-in fade-in duration-500">
         <div className="flex items-center gap-4">
           <Skeleton className="h-10 w-10 rounded-full" />
           <Skeleton className="h-8 w-48" />
@@ -121,7 +121,7 @@ export default function ExpenseDetailPage() {
 
   if (error || !expense) {
     return (
-      <div className="container max-w-2xl py-20 text-center space-y-4">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-20 text-center space-y-4">
         <div className="flex justify-center">
           <AlertCircle className="h-12 w-12 text-rose-500 opacity-20" />
         </div>
@@ -151,7 +151,7 @@ export default function ExpenseDetailPage() {
         <h1 className="text-sm font-black uppercase tracking-tighter">Expense Details</h1>
       </header>
 
-      <main className="container max-w-2xl p-4 py-8">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 p-4 py-8">
         <ExpenseDetail 
           expense={expense}
           currentUserId={currentUserId}

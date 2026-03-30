@@ -19,7 +19,7 @@ import {
 
 export default function GroupsPage() {
   const router = useRouter();
-  const { ready, getAccessToken } = usePrivy();
+  const { ready, authenticated, login, getAccessToken } = usePrivy();
   const { data: groups, isLoading, error, refetch } = useQuery({
     queryKey: ["groups"],
     queryFn: async () => {
@@ -30,15 +30,48 @@ export default function GroupsPage() {
       apiClient.setToken(token);
       return apiClient.groups.list();
     },
-    enabled: ready,
+    enabled: ready && authenticated,
     retry: (_, err) =>
       err instanceof Error && err.message === SIGN_IN_REQUIRED ? false : true,
   });
 
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 space-y-4 py-8">
+        <div className="h-8 w-48 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+        <GroupListSkeleton count={4} />
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 space-y-6 py-12 text-center">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Your groups
+        </h1>
+        <p className="mx-auto max-w-md text-slate-600 dark:text-slate-400">
+          Sign in to view and manage groups you belong to.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button
+            className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500"
+            onClick={() => login()}
+          >
+            Sign in
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/">Back to home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="container max-w-2xl py-8 space-y-4">
-        <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 space-y-4 py-8">
+        <div className="h-8 w-48 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
         <GroupListSkeleton count={4} />
       </div>
     );
@@ -46,16 +79,19 @@ export default function GroupsPage() {
 
   if (error instanceof Error && error.message === SIGN_IN_REQUIRED) {
     return (
-      <div className="container max-w-2xl py-12 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Sign in required</h1>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          Load your groups after signing in. Refresh the page, or return home and open the app again.
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 space-y-4 py-12 text-center">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Session refresh needed
+        </h1>
+        <p className="mx-auto max-w-md text-slate-600 dark:text-slate-400">
+          We could not get a valid session token. Try signing in again, or go home and reopen the app.
         </p>
-        <div className="flex gap-3 justify-center">
+        <div className="flex flex-wrap justify-center gap-3">
           <Button variant="outline" onClick={() => refetch()}>
             Retry
           </Button>
-          <Button asChild>
+          <Button onClick={() => login()}>Sign in again</Button>
+          <Button variant="outline" asChild>
             <Link href="/">Back to home</Link>
           </Button>
         </div>
@@ -65,20 +101,22 @@ export default function GroupsPage() {
 
   if (error) {
     return (
-      <div className="container max-w-2xl py-12 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Could not load groups</h1>
-        <p className="text-muted-foreground">{error.message}</p>
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 space-y-4 py-12 text-center">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Could not load groups
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400">{error.message}</p>
         <Button onClick={() => refetch()}>Try again</Button>
       </div>
     );
   }
 
   return (
-    <div className="container max-w-2xl py-8 space-y-6">
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 space-y-6 py-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Your Groups</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Your Groups</h1>
         <Link href="/groups/create">
-          <button className="inline-flex items-center justify-center rounded-full bg-primary p-2 text-primary-foreground hover:bg-primary/90 transition-colors">
+          <button className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-violet-600 p-2 text-white hover:bg-violet-700 transition-colors">
             <Plus className="h-5 w-5" />
           </button>
         </Link>
@@ -94,22 +132,26 @@ export default function GroupsPage() {
           className="py-12"
         />
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-4">
           {groups.map((group) => (
-            <Link key={group.id} href={`/groups/${group.id}`}>
-              <Card className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between group">
+            <Link
+              key={group.id}
+              href={`/groups/${group.id}`}
+              className="block outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950 rounded-2xl"
+            >
+              <Card className="p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-between group rounded-2xl">
                 <div className="flex items-center space-x-4">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+                  <div className="h-12 w-12 rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300 flex items-center justify-center font-bold text-xl">
                     {group.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-semibold">{group.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{group.name}</h3>
                     <div className="flex items-center space-x-2">
-                      <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 uppercase">
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 uppercase bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                         {group.category}
                       </Badge>
                       {group.description && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                        <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[150px]">
                           {group.description}
                         </span>
                       )}

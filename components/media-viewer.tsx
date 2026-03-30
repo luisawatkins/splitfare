@@ -203,7 +203,7 @@ export function MediaViewer({
       </div>
 
       <div className="bg-black/40 border-t border-white/10 p-6 z-50">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="space-y-1">
             <span className="text-[10px] font-black uppercase text-white/40 tracking-widest flex items-center gap-1.5">
               <User className="h-3 w-3" /> Uploader

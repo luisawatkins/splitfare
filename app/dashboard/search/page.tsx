@@ -1,142 +1,74 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { format, parseISO } from "date-fns";
-import {
-  Search,
-  Users,
-  Receipt,
-  Tag,
-  Utensils,
-  Car,
-  Home,
-  Music,
-  ShoppingBag,
-  Zap,
-  Plane,
-  ArrowRight,
-  SearchX,
-} from "lucide-react";
-import { apiClient } from "@/lib/api-client";
-import { usePrivy } from "@privy-io/react-auth";
-import { cn } from "@/lib/cn";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { CATEGORIES } from "@/lib/validations/expense";
-import { fetchExpensesAcrossGroups } from "@/lib/cross-group-expenses";
-
-const categoryIcons: Record<string, typeof Tag> = {
-  general: Tag,
-  food: Utensils,
-  transport: Car,
-  housing: Home,
-  entertainment: Music,
-  shopping: ShoppingBag,
-  utilities: Zap,
-  travel: Plane,
-};
-
-function safeFormatDate(iso: string) {
-  try {
-    return format(parseISO(iso), "MMM d, yyyy");
-  } catch {
-    return "";
-  }
-}
+import { motion, useReducedMotion } from "framer-motion";
+import { Receipt, Search, SearchX } from "lucide-react";
 
 function matchesQuery(haystack: string | null | undefined, q: string) {
   if (!haystack) return false;
   return haystack.toLowerCase().includes(q);
 }
 
+const MOCK_GROUPS = [
+  { id: "g1", name: "Lisbon Trip", description: "Summer travel crew", category: "Travel", invite_code: "LIS24" },
+  { id: "g2", name: "Apartment 24B", description: "Roommates and utilities", category: "Rent", invite_code: "APT24" },
+];
+
+const MOCK_EXPENSES = [
+  { id: "e1", groupId: "g1", groupName: "Lisbon Trip", description: "Train passes", category: "Travel", paidByName: "Alex", total_amount: 56, currency: "USD" },
+  { id: "e2", groupId: "g2", groupName: "Apartment 24B", description: "Electricity bill", category: "Utilities", paidByName: "Mia", total_amount: 92.2, currency: "USD" },
+];
+
 export default function SearchPage() {
-  const { getAccessToken } = usePrivy();
+  const reduceMotion = useReducedMotion();
   const [rawQuery, setRawQuery] = useState("");
   const q = rawQuery.trim().toLowerCase();
 
-  const { data: groups, isLoading: groupsLoading } = useQuery({
-    queryKey: ["groups"],
-    queryFn: async () => {
-      const token = await getAccessToken();
-      if (token) apiClient.setToken(token);
-      return apiClient.groups.list();
-    },
-  });
-
-  const groupsWithId = (groups ?? []).filter(
-    (g): g is typeof g & { id: string } => typeof g.id === "string" && g.id.length > 0
-  );
-
-  const { data: expenseRows, isLoading: expensesLoading } = useQuery({
-    queryKey: ["dashboard-expenses", groupsWithId.map((g) => g.id)],
-    enabled: groupsWithId.length > 0,
-    queryFn: async () => {
-      const token = await getAccessToken();
-      if (!token) return [];
-      return fetchExpensesAcrossGroups(token, groupsWithId);
-    },
-  });
-
-  const expenses = expenseRows ?? [];
-
   const matchedGroups = useMemo(() => {
     if (!q) return [];
-    return groupsWithId.filter(
+    return MOCK_GROUPS.filter(
       (g) =>
         matchesQuery(g.name, q) ||
         matchesQuery(g.description, q) ||
         matchesQuery(g.category, q) ||
         matchesQuery(g.invite_code, q)
     );
-  }, [groupsWithId, q]);
+  }, [q]);
 
   const matchedExpenses = useMemo(() => {
     if (!q) return [];
-    return expenses.filter(
+    return MOCK_EXPENSES.filter(
       (e) =>
         matchesQuery(e.description, q) ||
         matchesQuery(e.groupName, q) ||
         matchesQuery(e.paidByName, q) ||
         matchesQuery(e.category, q)
     );
-  }, [expenses, q]);
-
-  const isLoading =
-    groupsLoading || (groupsWithId.length > 0 && expensesLoading);
+  }, [q]);
   const hasQuery = q.length > 0;
   const noMatches =
     hasQuery && matchedGroups.length === 0 && matchedExpenses.length === 0;
 
   return (
-    <div className="container max-w-2xl py-10 space-y-8 min-h-screen bg-slate-950">
-      <header className="px-2 space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8">
+      <header className="mb-6 space-y-6">
         <div className="space-y-1">
-          <p className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-500">
-            Find
-          </p>
-          <h1 className="text-3xl font-black tracking-tight uppercase text-slate-50">
-            Search
-          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Find</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Search</h1>
         </div>
 
         <div className="relative">
           <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400"
             size={20}
             strokeWidth={2.5}
           />
-          <Input
+          <input
             value={rawQuery}
             onChange={(e) => setRawQuery(e.target.value)}
             placeholder="Groups, expenses, invite code…"
-            className={cn(
-              "h-14 pl-12 pr-4 rounded-2xl border-2 border-slate-800 bg-slate-900 text-slate-50",
-              "placeholder:text-slate-600 font-medium text-sm",
-              "focus-visible:ring-2 focus-visible:ring-brand-pink/40 focus-visible:border-brand-pink/30"
-            )}
+            className="h-14 w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -144,102 +76,69 @@ export default function SearchPage() {
         </div>
       </header>
 
-      {isLoading ? (
-        <div className="space-y-4 px-2">
-          <div className="h-4 w-24 bg-slate-800 animate-pulse rounded" />
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-16 w-full bg-slate-900 animate-pulse rounded-3xl border-2 border-slate-800"
-            />
-          ))}
-        </div>
-      ) : groupsWithId.length === 0 ? (
+      {!hasQuery ? (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-2 flex flex-col items-center justify-center py-20 gap-5 bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[2.5rem]"
+          className="flex flex-col items-center justify-center py-16 gap-4 text-center px-6"
         >
-          <Users className="h-12 w-12 stroke-[3] text-brand-pink" />
-          <p className="text-slate-500 text-sm font-medium text-center px-8">
-            Join or create a group to search expenses and group details here.
-          </p>
-          <Link
-            href="/groups/create"
-            className="px-6 py-3 rounded-full bg-brand-pink text-slate-950 text-[11px] font-black uppercase tracking-[0.2em] border-2 border-slate-900 shadow-brutalist-sm"
-          >
-            Create group
-          </Link>
-        </motion.div>
-      ) : !hasQuery ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-2 flex flex-col items-center justify-center py-16 gap-4 text-center px-6"
-        >
-          <div className="h-16 w-16 rounded-2xl border-2 border-slate-800 bg-slate-900 flex items-center justify-center text-brand-pink">
-            <Search size={28} className="stroke-[3]" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 bg-white text-violet-600 dark:border-slate-700 dark:bg-slate-900 dark:text-violet-400">
+            <Search size={28} />
           </div>
-          <p className="text-slate-400 text-sm font-medium max-w-sm">
+          <p className="max-w-sm text-sm font-medium text-slate-500 dark:text-slate-400">
             Search by group name, description, category, invite code, expense
             title, or who paid.
           </p>
         </motion.div>
       ) : noMatches ? (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-2 flex flex-col items-center justify-center py-20 gap-4 bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[2.5rem]"
+          className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-white py-20 dark:border-slate-600 dark:bg-slate-900/60"
         >
-          <SearchX className="h-12 w-12 stroke-[3] text-slate-600" />
-          <p className="text-slate-50 font-black uppercase tracking-wide text-sm">
+          <SearchX className="h-12 w-12 text-slate-400 dark:text-slate-500" />
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
             No matches
           </p>
-          <p className="text-slate-500 text-sm font-medium px-8 text-center">
+          <p className="px-8 text-center text-sm text-slate-500 dark:text-slate-400">
             Try another keyword or check spelling.
           </p>
         </motion.div>
       ) : (
-        <div className="space-y-10 px-2 pb-8">
+        <div className="space-y-8 pb-8">
           {matchedGroups.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-slate-500 px-1">
+              <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Groups
               </h2>
               <div className="space-y-2">
                 {matchedGroups.map((group, index) => (
                   <motion.div
                     key={group.id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={reduceMotion ? false : { opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.04 }}
+                    transition={{ delay: reduceMotion ? 0 : index * 0.08, duration: 0.3 }}
                   >
-                    <Link href={`/groups/${group.id}`}>
-                      <div className="flex items-center gap-4 p-4 bg-slate-900 border-2 border-slate-800 rounded-3xl hover:border-slate-700 hover:bg-slate-900/80 active:translate-y-0.5 transition-all shadow-brutalist-sm group">
-                        <div className="h-12 w-12 rounded-2xl bg-brand-pink/10 border-2 border-brand-pink/20 flex items-center justify-center text-brand-pink font-black text-lg shrink-0">
+                      <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-sm font-semibold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
                           {group.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-slate-50 font-black text-sm truncate uppercase tracking-wide">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                             {group.name}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <Badge
-                              variant="secondary"
-                              className="text-[9px] px-1.5 py-0 h-4 uppercase font-black tracking-wider bg-slate-800 text-slate-300 border border-slate-700"
-                            >
+                          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
                               {group.category}
-                            </Badge>
+                            </span>
                             {group.description ? (
-                              <span className="text-slate-500 text-[11px] font-medium truncate max-w-[200px]">
+                              <span className="max-w-[200px] truncate text-xs text-slate-500 dark:text-slate-400">
                                 {group.description}
                               </span>
                             ) : null}
                           </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-slate-300 shrink-0 stroke-[2.5]" />
                       </div>
-                    </Link>
                   </motion.div>
                 ))}
               </div>
@@ -248,44 +147,31 @@ export default function SearchPage() {
 
           {matchedExpenses.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-slate-500 px-1">
+              <h2 className="px-1 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
                 Expenses
               </h2>
               <div className="space-y-2">
                 {matchedExpenses.map((row, index) => {
-                  const Icon = categoryIcons[row.category] || Tag;
-                  const categoryMeta = CATEGORIES.find(
-                    (c) => c.id === row.category
-                  );
-                  const tagLabel = (categoryMeta?.id ?? row.category).toUpperCase();
-
                   return (
                     <motion.div
                       key={`${row.groupId}-${row.id}`}
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={reduceMotion ? false : { opacity: 0, x: -12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.04 }}
+                      transition={{ delay: reduceMotion ? 0 : index * 0.08, duration: 0.3 }}
                     >
-                      <Link
-                        href={`/groups/${row.groupId}/expenses/${row.id}`}
-                      >
-                        <div className="flex items-center gap-4 p-4 bg-slate-900 border-2 border-slate-800 rounded-3xl hover:border-slate-700 hover:bg-slate-900/80 active:translate-y-0.5 transition-all shadow-brutalist-sm group">
-                          <div className="h-12 w-12 rounded-2xl flex items-center justify-center border-2 shrink-0 bg-brand-pink/10 border-brand-pink/20 text-brand-pink">
-                            <Icon size={20} className="stroke-[3]" />
+                        <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            <Receipt size={20} />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-slate-50 font-black text-sm truncate uppercase tracking-wide">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                               {row.description}
                             </p>
-                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              <Badge
-                                variant="secondary"
-                                className="text-[9px] px-1.5 py-0 h-4 uppercase font-black tracking-wider bg-slate-800 text-slate-300 border border-slate-700"
-                              >
-                                {tagLabel}
-                              </Badge>
-                              <span className="text-slate-500 text-[11px] font-medium truncate">
-                                {safeFormatDate(row.created_at)}
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                              <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                {row.category}
+                              </span>
+                              <span className="truncate text-xs text-slate-500 dark:text-slate-400">
                                 {row.paidByName
                                   ? ` · ${row.paidByName}`
                                   : ""}
@@ -294,17 +180,16 @@ export default function SearchPage() {
                               </span>
                             </div>
                           </div>
-                          <p className="text-xs font-black text-brand-pink tabular-nums shrink-0">
+                          <p className="shrink-0 font-mono text-xs font-semibold tabular-nums text-slate-900 dark:text-slate-100">
                             {row.total_amount.toLocaleString(undefined, {
                               minimumFractionDigits: 0,
                               maximumFractionDigits: 2,
                             })}{" "}
-                            <span className="text-slate-500 text-[9px] uppercase">
+                            <span className="text-[10px] uppercase text-slate-500 dark:text-slate-400">
                               {row.currency}
                             </span>
                           </p>
                         </div>
-                      </Link>
                     </motion.div>
                   );
                 })}
@@ -313,6 +198,7 @@ export default function SearchPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

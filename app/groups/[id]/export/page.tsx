@@ -155,7 +155,7 @@ export default function ExportPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-xl border-2 border-slate-900">

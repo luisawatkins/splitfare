@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 
 export default function CreateGroupPage() {
   return (
-    <div className="container max-w-2xl py-8 space-y-6">
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-8 space-y-6">
       <div className="flex items-center space-x-2">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/dashboard">

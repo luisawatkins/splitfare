@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { Users, Loader2, ArrowLeft, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type GroupPreview = {
   id: string;
@@ -104,7 +105,10 @@ export default function JoinGroupPage({ params }: { params: { code: string } }) 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="relative min-h-screen flex items-center justify-center bg-background">
+        <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6">
+          <ThemeToggle />
+        </div>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -112,7 +116,10 @@ export default function JoinGroupPage({ params }: { params: { code: string } }) 
 
   if (error) {
     return (
-      <div className="container max-w-md py-12 space-y-6">
+      <div className="relative container max-w-md py-12 space-y-6">
+        <div className="absolute -top-2 right-4 z-10 sm:right-6">
+          <ThemeToggle />
+        </div>
         <Card className="p-8 text-center space-y-4 border-destructive/20 bg-destructive/5">
           <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
             <ShieldAlert className="h-6 w-6" />
@@ -130,7 +137,10 @@ export default function JoinGroupPage({ params }: { params: { code: string } }) 
   }
 
   return (
-    <div className="container max-w-md py-12 space-y-6">
+    <div className="relative container max-w-md py-12 space-y-6">
+      <div className="absolute top-4 right-4 z-10 sm:right-6">
+        <ThemeToggle />
+      </div>
       <Link href="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4 mr-1" />
         Back to Dashboard

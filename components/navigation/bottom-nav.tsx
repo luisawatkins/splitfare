@@ -17,16 +17,16 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex items-center justify-between bg-slate-950/80 backdrop-blur-xl border-t-2 border-slate-900 px-6 h-24 pb-6">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex items-center justify-between bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-5 h-20">
       {NAV_ITEMS.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;
 
         if (item.isFab) {
           return (
-            <Link key={item.label} href={item.href} className="relative -top-8">
-              <div className="h-16 w-16 rounded-full bg-brand-pink flex items-center justify-center text-slate-950 shadow-brutalist border-2 border-slate-900 active:translate-y-1 active:shadow-none transition-all duration-200">
-                <Plus size={32} className="stroke-[4]" />
+            <Link key={item.label} href={item.href} className="relative -top-6">
+              <div className="h-14 w-14 rounded-full bg-violet-600 flex items-center justify-center text-white transition-transform duration-200 active:scale-95">
+                <Plus size={24} />
               </div>
             </Link>
           );
@@ -35,14 +35,14 @@ export function BottomNav() {
         return (
           <Link key={item.label} href={item.href} className="flex flex-col items-center gap-1.5 group">
             <div className={cn(
-              "p-2.5 rounded-2xl transition-all duration-300 active:scale-90 border-2 border-transparent",
-              isActive ? "bg-brand-pink/10 text-brand-pink border-brand-pink/20" : "text-slate-500 hover:text-slate-300"
+              "p-2 rounded-xl transition-all duration-200",
+              isActive ? "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300" : "text-slate-500 dark:text-slate-400"
             )}>
               <Icon size={22} className={cn("transition-all duration-300", isActive ? "stroke-[3]" : "stroke-[2]")} />
             </div>
             <span className={cn(
-              "text-[8px] font-black uppercase tracking-[0.2em] transition-all duration-300",
-              isActive ? "text-brand-pink opacity-100" : "text-slate-600 opacity-80"
+              "text-[10px] font-medium transition-all duration-200",
+              isActive ? "text-violet-700 dark:text-violet-300 opacity-100" : "text-slate-500 dark:text-slate-400 opacity-80"
             )}>
               {item.label}
             </span>

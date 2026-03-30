@@ -46,11 +46,17 @@ function paramToString(v: string | string[] | undefined): string | undefined {
 export default function GroupDetailsPage() {
   const params = useParams();
   const id = paramToString(params.id);
-  const { ready, user: privyUser, getAccessToken } = usePrivy();
+  const { ready, authenticated, login, user: privyUser, getAccessToken } =
+    usePrivy();
   const currentUserId = privyUser ? toDbUserId(privyUser.id) : "";
   const [activeTab, setActiveTab] = useState("expenses");
 
-  const { data: group, isLoading: groupLoading, error } = useQuery({
+  const {
+    data: group,
+    isLoading: groupLoading,
+    error,
+    refetch: refetchGroup,
+  } = useQuery({
     queryKey: ["group", id],
     queryFn: async () => {
       const token = await resolvePrivyAccessToken(getAccessToken);
@@ -69,7 +75,7 @@ export default function GroupDetailsPage() {
       }
       return g;
     },
-    enabled: !!id && ready,
+    enabled: !!id && ready && authenticated,
     retry: (_, err) =>
       err instanceof Error && err.message === SIGN_IN_REQUIRED ? false : true,
   });
@@ -96,7 +102,7 @@ export default function GroupDetailsPage() {
       }
       return result.data;
     },
-    enabled: !!id && ready,
+    enabled: !!id && ready && authenticated,
     retry: (_, err) =>
       err instanceof Error && err.message === SIGN_IN_REQUIRED ? false : true,
   });
@@ -105,12 +111,36 @@ export default function GroupDetailsPage() {
 
   if (!id) {
     return (
-      <div className="container max-w-2xl py-12 text-center space-y-4">
+      <div className="mx-auto w-full max-w-6xl px-4 py-12 text-center sm:px-6 space-y-4">
         <h1 className="text-2xl font-bold">Invalid group link</h1>
         <p className="text-muted-foreground">This URL is missing a group id.</p>
         <Button asChild>
           <Link href="/groups">Back to Groups</Link>
         </Button>
+      </div>
+    );
+  }
+
+  if (ready && !authenticated) {
+    return (
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-12 text-center sm:px-6">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Sign in to view this group
+        </h1>
+        <p className="mx-auto max-w-md text-slate-600 dark:text-slate-400">
+          Open your account to load group details and balances.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button
+            className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500"
+            onClick={() => login()}
+          >
+            Sign in
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/groups">Back to groups</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -143,21 +173,30 @@ export default function GroupDetailsPage() {
 
   if (error instanceof Error && error.message === SIGN_IN_REQUIRED) {
     return (
-      <div className="container max-w-2xl py-12 text-center space-y-4">
-        <h1 className="text-2xl font-bold">Sign in required</h1>
-        <p className="text-muted-foreground">
-          Your session has no access token. Refresh the page or open the app from the home screen and sign in again.
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-12 text-center sm:px-6">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          Session refresh needed
+        </h1>
+        <p className="mx-auto max-w-md text-slate-600 dark:text-slate-400">
+          We could not get a valid session token. Try signing in again, or go
+          home and reopen the app.
         </p>
-        <Button asChild>
-          <Link href="/">Back to home</Link>
-        </Button>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button variant="outline" onClick={() => void refetchGroup()}>
+            Retry
+          </Button>
+          <Button onClick={() => login()}>Sign in again</Button>
+          <Button variant="outline" asChild>
+            <Link href="/">Back to home</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (error || !group) {
     return (
-      <div className="container max-w-2xl py-12 text-center space-y-4">
+      <div className="mx-auto w-full max-w-6xl px-4 py-12 text-center sm:px-6 space-y-4">
         <h1 className="text-2xl font-bold">Group not found</h1>
         <p className="text-muted-foreground">The group you're looking for doesn't exist or you don't have access.</p>
         <Button asChild>
@@ -217,7 +256,7 @@ export default function GroupDetailsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl p-6 space-y-10">
+      <main className="mx-auto w-full max-w-6xl space-y-10 px-4 py-6 sm:px-6 lg:px-8">
         <BalanceSummary netBalance={currentUserBalance} currency={group.currency || "USDC"} />
         
         <QuickActions groupId={id} />
