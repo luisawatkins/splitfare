@@ -25,6 +25,7 @@ Thumbs.db
 # Misc
 coverage/
 dist/
+*.tsbuildinfo
 
 # Media (videos)
 *.mp4
