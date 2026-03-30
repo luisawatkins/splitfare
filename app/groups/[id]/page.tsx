@@ -58,7 +58,7 @@ export default function GroupDetailsPage() {
         throw new Error(SIGN_IN_REQUIRED);
       }
       apiClient.setToken(token);
-      const g = await apiClient.groups.get(id);
+      const g = await apiClient.groups.get(id as string);
       if (
         g &&
         typeof g === "object" &&
@@ -81,7 +81,7 @@ export default function GroupDetailsPage() {
       if (!token) {
         throw new Error(SIGN_IN_REQUIRED);
       }
-      const res = await fetch(`/api/groups/${id}/members`, {
+      const res = await fetch(`/api/groups/${id as string}/members`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
