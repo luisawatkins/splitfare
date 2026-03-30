@@ -1,3 +1,12 @@
+import { calculateNetBalances, GroupMember, GroupExpense, GroupSettlement } from './balances';
+
+/**
+ * DB-shaped interfaces for balance computation.
+ * This is a thin adapter over `calculateNetBalances` (from balances.ts)
+ * to avoid duplicate logic. It converts DB column names (created_by, user_id, etc.)
+ * to the canonical interface used by the core calculation.
+ */
+
 export interface Member {
   user: {
     id: string;
@@ -26,35 +35,26 @@ export function calculateBalances(
   expenses: Expense[],
   settlements: Settlement[]
 ): Record<string, number> {
-  const balances: Record<string, number> = {};
+  const canonicalMembers: GroupMember[] = members
+    .filter(m => m.user?.id)
+    .map(m => ({ id: m.user.id, name: m.user.name ?? '' }));
 
-  members.forEach((m) => {
-    const user = m.user;
-    if (user?.id) balances[user.id] = 0;
-  });
+  const canonicalExpenses: GroupExpense[] = (expenses ?? []).map(e => ({
+    id: '',
+    paidById: e.created_by,
+    amount: Number(e.total_amount),
+    splits: (e.splits ?? []).map(s => ({
+      userId: s.user_id,
+      amount: Number(s.amount_owed),
+    })),
+  }));
 
-  expenses?.forEach((expense) => {
-    const creatorId = expense.created_by;
+  const canonicalSettlements: GroupSettlement[] = (settlements ?? []).map(s => ({
+    id: '',
+    payerId: s.payer_id,
+    payeeId: s.payee_id,
+    amount: Number(s.amount),
+  }));
 
-    if (balances[creatorId] !== undefined) {
-      balances[creatorId] += Number(expense.total_amount);
-    }
-
-    expense.splits?.forEach((split) => {
-      if (balances[split.user_id] !== undefined) {
-        balances[split.user_id] -= Number(split.amount_owed);
-      }
-    });
-  });
-
-  settlements?.forEach((settlement) => {
-    if (balances[settlement.payer_id] !== undefined) {
-      balances[settlement.payer_id] += Number(settlement.amount);
-    }
-    if (balances[settlement.payee_id] !== undefined) {
-      balances[settlement.payee_id] -= Number(settlement.amount);
-    }
-  });
-
-  return balances;
+  return calculateNetBalances(canonicalMembers, canonicalExpenses, canonicalSettlements);
 }

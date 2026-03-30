@@ -4,10 +4,6 @@ import { createServerStorachaService } from '@/lib/storacha-server';
 import { ethers, JsonRpcProvider, Wallet, Contract, TransactionResponse } from 'ethers';
 import { splitFareCIDRegistryAbi } from '@/lib/contracts/abi';
 
-const REGISTRY_ADDRESS = process.env.NEXT_PUBLIC_CID_REGISTRY_ADDRESS as string;
-const ANCHOR_PRIVATE_KEY = process.env.ANCHOR_PRIVATE_KEY as string;
-const RPC_URL = process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
-
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
 
