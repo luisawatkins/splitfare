@@ -18,8 +18,6 @@ export const namespaceClient = createOffchainClient({
 
 if (process.env.NAMESPACE_API_KEY) {
   namespaceClient.setApiKey(DOMAIN, process.env.NAMESPACE_API_KEY);
-} else if (process.env.NEXT_PUBLIC_NAMESPACE_API_KEY) {
-  namespaceClient.setApiKey(DOMAIN, process.env.NEXT_PUBLIC_NAMESPACE_API_KEY);
 } else {
   console.warn("NAMESPACE_API_KEY is not defined in environment variables");
 }
