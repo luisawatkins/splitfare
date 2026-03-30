@@ -143,8 +143,10 @@ describe('Integration Flow - Full Settlement Cycle', () => {
   it('should maintain status as pending if transaction fails or is slow', async () => {
     const txHash = '0xabc123';
     vi.mocked(nexusService.getTransferStatus).mockResolvedValueOnce({
-      status: 'PENDING',
+      status: 'pending',
       transactionHash: txHash,
+      explorerUrl: `https://nexus.availproject.org/tx/${txHash}`,
+      steps: []
     });
 
     const verification = await verifySettlementTransaction(txHash);

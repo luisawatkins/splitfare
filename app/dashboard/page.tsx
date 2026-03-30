@@ -168,19 +168,19 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {members.map((m, index) => (
                   <motion.div
-                    key={m.group.id}
+                    key={m.group.id || `group-${index}`}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
                     <GroupCard
-                      id={m.group.id}
+                      id={m.group.id || ""}
                       name={m.group.name}
                       category={m.group.category}
                       memberCount={m.memberCount}
                       userBalance={m.balance}
                       currency={m.group.currency || "USDC"}
-                      avatarUrl={m.group.avatar_url}
+                      avatarUrl={m.group.avatar_url || ""}
                     />
                   </motion.div>
                 ))}

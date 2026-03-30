@@ -111,7 +111,7 @@ const getBalances = async (req: AuthenticatedRequest, { params }: { params: { id
       };
     });
 
-    expenses.forEach(exp => {
+    (expenses || []).forEach(exp => {
       // Add to payer's total paid
       if (memberBalances[exp.created_by]) {
         memberBalances[exp.created_by].totalPaid += Number(exp.total_amount);

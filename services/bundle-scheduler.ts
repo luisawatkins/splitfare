@@ -165,7 +165,7 @@ export class BundleSchedulerService {
           title: 'Data Bundle Anchored',
           message: `Your group "${groupName}" data has been securely bundled and anchored on-chain. CID: ${rootCid.slice(0, 10)}...`,
           type: 'bundle_success',
-          metadata: { groupId, rootCid }
+          data: { groupId, rootCid }
         })
       ));
     }

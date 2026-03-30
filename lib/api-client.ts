@@ -16,9 +16,6 @@ class ApiClient {
 
   setToken(token: string) {
     this.token = token;
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('api_token', token);
-    }
   }
 
   private async request<T>(
@@ -29,9 +26,8 @@ class ApiClient {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = new Headers(options.headers);
 
-    // Try to recover token from session storage if not present
-    if (!this.token && typeof window !== 'undefined') {
-      this.token = sessionStorage.getItem('api_token');
+    if (!this.token) {
+      throw new Error('No authentication token available. Please log in.');
     }
 
     if (this.token) {
@@ -87,10 +83,10 @@ class ApiClient {
   };
 
   expenses = {
-    list: (groupId: string) => this.request<Expense[]>('GET', `/expenses?groupId=${groupId}`),
-    get: (id: string) => this.request<Expense>('GET', `/expenses/${id}`),
-    create: (data: CreateExpense) => this.request<Expense>('POST', '/expenses', { body: JSON.stringify(data) }),
-    delete: (id: string) => this.request<void>('DELETE', `/expenses/${id}`),
+    list: (groupId: string) => this.request<Expense[]>('GET', `/groups/${groupId}/expenses`),
+    get: (groupId: string, id: string) => this.request<Expense>('GET', `/groups/${groupId}/expenses/${id}`),
+    create: (groupId: string, data: CreateExpense) => this.request<Expense>('POST', `/groups/${groupId}/expenses`, { body: JSON.stringify(data) }),
+    delete: (groupId: string, id: string) => this.request<void>('DELETE', `/groups/${groupId}/expenses/${id}`),
   };
 
   settlements = {

@@ -19,6 +19,7 @@ async function compressImage(file: File): Promise<Blob> {
     const img = new Image();
     img.src = URL.createObjectURL(file);
     img.onload = () => {
+      URL.revokeObjectURL(img.src);
       const canvas = document.createElement("canvas");
       let width = img.width;
       let height = img.height;
@@ -48,7 +49,10 @@ async function compressImage(file: File): Promise<Blob> {
         0.8
       );
     };
-    img.onerror = () => reject(new Error("Image load failed"));
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error("Image load failed"));
+    };
   });
 }
 

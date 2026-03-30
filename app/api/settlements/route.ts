@@ -43,6 +43,22 @@ const createSettlement = async (req: AuthenticatedRequest & { validatedBody: any
     const body = req.validatedBody;
     const userId = toDbUserId(req.user.id);
 
+    // Verify the authenticated user is the payer
+    if (body.payerId !== userId) {
+      return createResponse({ error: 'You can only create settlements where you are the payer' }, 403);
+    }
+
+    // Verify the user is a member of the group
+    const { data: membership, error: memberError } = await supabaseAdmin
+      .from('group_members')
+      .select('id')
+      .eq('group_id', body.groupId)
+      .eq('user_id', userId)
+      .single();
+
+    if (memberError || !membership) {
+      return createResponse({ error: 'Access denied: not a member of this group' }, 403);
+    }
     const { data: settlement, error } = await supabaseAdmin
       .from('settlements')
       .insert({

@@ -78,7 +78,7 @@ export class NexusService {
   ) {
     const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1e6)); // USDC has 6 decimals
 
-    return this.sdk.transfer(
+    return (this.sdk as any).transfer(
       {
         token,
         amount: amountBigInt,
@@ -94,23 +94,25 @@ export class NexusService {
   }
 
   async getTransferStatus(transactionHash: string) {
+    const explorerUrl = `https://nexus.availproject.org/tx/${transactionHash}`;
     try {
-      const status = await this.sdk.getTransactionStatus(transactionHash);
+      if (typeof (this.sdk as any).getTransactionStatus !== 'function') {
+        console.warn('NexusSDK.getTransactionStatus is not available in this SDK version');
+        return { status: 'pending', transactionHash, explorerUrl };
+      }
+      const status = await (this.sdk as any).getTransactionStatus(transactionHash);
       return {
-        status: status.state, // 'PENDING', 'COMPLETED', 'FAILED'
+        status: status?.state ?? status?.status ?? 'pending',
         transactionHash,
-        explorerUrl: `https://nexus.availproject.org/tx/${transactionHash}`,
-        steps: status.steps || [],
+        explorerUrl,
+        steps: status?.steps || [],
       };
     } catch (e) {
       console.error('Failed to fetch transfer status:', e);
-      return {
-        status: 'pending',
-        transactionHash,
-        explorerUrl: `https://nexus.availproject.org/tx/${transactionHash}`,
-      };
+      return { status: 'pending', transactionHash, explorerUrl };
     }
   }
 }
 
-export const nexusService = new NexusService('testnet');
+const nexusNetwork = process.env.NEXT_PUBLIC_CHAIN === 'mainnet' ? 'mainnet' : 'testnet';
+export const nexusService = new NexusService(nexusNetwork);

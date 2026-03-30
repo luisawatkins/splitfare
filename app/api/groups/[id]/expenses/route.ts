@@ -1,8 +1,8 @@
-import { withMiddleware, createResponse, AuthenticatedRequest } from '@/lib/api-utils';
+import { withMiddleware, createResponse, createErrorResponse, AuthenticatedRequest } from '@/lib/api-utils';
 import { supabaseAdmin } from '@/supabase/admin';
 import { toDbUserId } from '@/lib/privy-utils';
 import { CreateExpenseApiSchema, ExpenseFilterSchema } from '@/lib/validations/expense';
-import { z } from 'zod';
+import { ForbiddenError, AppError } from '@/lib/errors';
 import { notificationService } from '@/services/notification';
 
 
@@ -20,7 +20,7 @@ const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { i
       .single();
 
     if (memberError || !membership) {
-      return createResponse({ error: 'Access denied' }, 403);
+      throw new ForbiddenError('Access denied');
     }
 
     const filterParams = {
@@ -118,12 +118,13 @@ const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { i
 
     if (fetchError) {
       console.error('Error fetching expenses:', fetchError);
-      return createResponse({ error: 'Failed to fetch expenses' }, 400);
+      throw new AppError('Failed to fetch expenses', 400);
     }
 
-    const hasNextPage = expenses.length > validatedFilters.limit;
-    const paginatedExpenses = hasNextPage ? expenses.slice(0, -1) : expenses;
-    const nextCursor = hasNextPage ? paginatedExpenses[paginatedExpenses.length - 1].created_at : null;
+    const safeExpenses = expenses || [];
+    const hasNextPage = safeExpenses.length > validatedFilters.limit;
+    const paginatedExpenses = hasNextPage ? safeExpenses.slice(0, -1) : safeExpenses;
+    const nextCursor = hasNextPage && paginatedExpenses.length > 0 ? paginatedExpenses[paginatedExpenses.length - 1].created_at : null;
 
     return createResponse({
       items: paginatedExpenses,
@@ -131,11 +132,7 @@ const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { i
       hasNextPage,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return createResponse({ error: 'Invalid filter parameters', details: error.errors }, 400);
-    }
-    console.error('Error in GET /api/groups/[id]/expenses:', error);
-    return createResponse({ error: 'Internal server error' }, 500);
+    return createErrorResponse(error);
   }
 };
 
@@ -211,7 +208,7 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       .eq('group_id', groupId);
 
     if (members) {
-      const payerName = members.find(m => m.user_id === body.paidById)?.users?.name || 'Someone';
+      const payerName = members.find(m => m.user_id === body.paidById)?.users?.[0]?.name || 'Someone';
       const groupName = (members[0]?.groups as any)?.name || 'the group';
 
       const notificationPromises = members

@@ -9,14 +9,14 @@ export async function createServerStorachaService(
   options?: StorachaServiceOptions
 ): Promise<StorachaService> {
   const client = (await StorachaClient.create()) as unknown as {
-    uploadFile: (file: Blob, options?: unknown) => Promise<unknown>;
-    uploadCAR: (car: Blob, options?: unknown) => Promise<unknown>;
-    createSpace: (name?: string, options?: unknown) => Promise<unknown>;
+    uploadFile: (file: Blob, options?: Record<string, unknown>) => Promise<{ toString(): string }>;
+    uploadCAR: (car: Blob, options?: Record<string, unknown>) => Promise<{ toString(): string }>;
+    createSpace: (name?: string, options?: Record<string, unknown>) => Promise<{ did(): string }>;
     createDelegation?: (
-      audience: unknown,
-      abilities: unknown[],
-      options?: unknown
-    ) => Promise<unknown>;
+      audience: { did(): string },
+      abilities: string[],
+      options?: Record<string, unknown>
+    ) => Promise<{ archive(): Promise<Uint8Array> }>;
   };
   return new StorachaService(client, options);
 }

@@ -92,7 +92,7 @@ export function GroupForm() {
       const payload: CreateGroup = {
         name: data.name,
         description: data.description || null,
-        category: data.category,
+        category: data.category as "event" | "trip" | "household" | "project" | "other",
         currency: data.currency ?? "USDC",
         avatar_url: avatarUrl,
       };
