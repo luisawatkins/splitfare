@@ -82,15 +82,17 @@ export function SettleView({ groupId }: SettleViewProps) {
 
   if (myDebts.length === 0) {
     return (
-      <Card className="p-12 text-center border-2 border-dashed border-slate-800 bg-slate-900/30 rounded-[2.5rem]">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="h-20 w-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center border-2 border-emerald-500/20 rotate-3">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+      <Card className="w-full rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/90 p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/70 sm:p-10">
+        <div className="mx-auto flex max-w-2xl flex-col items-center gap-5">
+          <div className="flex h-20 w-20 rotate-3 items-center justify-center rounded-3xl border-2 border-emerald-500/25 bg-emerald-500/10">
+            <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-500" />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-xl font-black uppercase tracking-tighter text-emerald-500">Zero Debt!</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest max-w-[200px] mx-auto">
-              You don't owe anyone in this group. You're all settled up!
+          <div className="space-y-2">
+            <h3 className="text-xl font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-500">
+              Zero Debt!
+            </h3>
+            <p className="text-balance px-2 text-xs font-bold uppercase leading-relaxed tracking-wide text-slate-600 dark:text-slate-400 sm:text-sm sm:tracking-widest">
+              You don&apos;t owe anyone in this group. You&apos;re all settled up!
             </p>
           </div>
         </div>

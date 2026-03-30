@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ExpenseCategoryEnum } from "@/lib/validations/index";
 
 export const splitTypeSchema = z.enum(["EQUAL", "EXACT", "PERCENTAGE", "SHARES"]);
 
@@ -14,7 +15,7 @@ export const expenseSchema = z.object({
   description: z.string().min(1, "Description is required"),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   date: z.date().default(() => new Date()),
-  category: z.string().min(1, "Category is required"),
+  category: ExpenseCategoryEnum,
   paidById: z.string().min(1, "Who paid is required"),
   splitType: splitTypeSchema.default("EQUAL"),
   members: z.array(expenseMemberSchema).min(1, "At least one member must be involved"),
@@ -30,7 +31,7 @@ export const CreateExpenseApiSchema = z.object({
   description: z.string().min(1, "Description is required"),
   amount: z.number().min(0.01, "Amount must be greater than 0"),
   date: z.string().datetime().optional().default(() => new Date().toISOString()),
-  category: z.string().min(1, "Category is required"),
+  category: ExpenseCategoryEnum,
   paidById: z.string().uuid("Invalid user ID for paidById"),
   splitType: splitTypeSchema,
   splits: z.array(z.object({
@@ -45,7 +46,7 @@ export const CreateExpenseApiSchema = z.object({
 export const UpdateExpenseApiSchema = CreateExpenseApiSchema.partial();
 
 export const ExpenseFilterSchema = z.object({
-  category: z.string().optional(),
+  category: ExpenseCategoryEnum.optional(),
   paidBy: z.string().uuid().optional(),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
@@ -59,13 +60,12 @@ export type CreateExpenseApi = z.infer<typeof CreateExpenseApiSchema>;
 export type UpdateExpenseApi = z.infer<typeof UpdateExpenseApiSchema>;
 export type ExpenseFilter = z.infer<typeof ExpenseFilterSchema>;
 
+/** IDs must match Postgres `expense_category` / `ExpenseCategoryEnum` in `lib/validations/index.ts`. */
 export const CATEGORIES = [
-  { id: "general", name: "General", icon: "Tag" },
-  { id: "food", name: "Food & Drinks", icon: "Utensils" },
+  { id: "other", name: "General", icon: "Tag" },
+  { id: "food", name: "Food & drinks", icon: "Utensils" },
   { id: "transport", name: "Transport", icon: "Car" },
-  { id: "housing", name: "Housing", icon: "Home" },
-  { id: "entertainment", name: "Entertainment", icon: "Music" },
-  { id: "shopping", name: "Shopping", icon: "ShoppingBag" },
-  { id: "utilities", name: "Utilities", icon: "Zap" },
+  { id: "accommodation", name: "Housing & stay", icon: "Home" },
   { id: "travel", name: "Travel", icon: "Plane" },
-];
+  { id: "subscription", name: "Subscriptions & utilities", icon: "Zap" },
+] as const;

@@ -42,7 +42,7 @@ export async function fetchExpensesAcrossGroups(
             groupName: g.name,
             currency: g.currency ?? "USDC",
             description: e.description?.trim() || "Expense",
-            category: e.category || "general",
+            category: e.category || "other",
             total_amount: Number(e.total_amount),
             created_at: e.created_at,
             paidByName: e.paidBy?.name ?? null,

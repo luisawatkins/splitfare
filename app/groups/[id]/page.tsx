@@ -215,23 +215,23 @@ export default function GroupDetailsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-32">
-      <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b-2 border-slate-900 bg-slate-950/80 px-4 backdrop-blur-md">
+    <div className="min-h-screen bg-slate-50 pb-32 dark:bg-slate-950">
+      <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b-2 border-slate-200 bg-white/80 px-4 backdrop-blur-md dark:border-slate-900 dark:bg-slate-950/80">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-900 border-2 border-transparent hover:border-slate-800 transition-all" asChild>
+          <Button variant="ghost" size="icon" className="rounded-xl border-2 border-transparent transition-all hover:border-slate-200 hover:bg-slate-100 dark:hover:border-slate-800 dark:hover:bg-slate-900" asChild>
             <Link href="/dashboard">
               <ArrowLeft size={20} className="stroke-[3]" />
             </Link>
           </Button>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-black uppercase tracking-tight text-slate-50 leading-none">{group.name}</h1>
-              <Link href={`/groups/${id}/verify`} className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all">
+              <h1 className="text-base font-black uppercase leading-none tracking-tight text-slate-900 dark:text-slate-50">{group.name}</h1>
+              <Link href={`/groups/${id}/verify`} className="flex items-center gap-1 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-700 transition-all hover:bg-emerald-500/20 dark:text-emerald-400">
                 <ShieldCheck size={10} className="stroke-[3]" />
                 <span className="text-[8px] font-black uppercase tracking-widest">Verified</span>
               </Link>
             </div>
-            <span className="text-[10px] font-black opacity-40 uppercase tracking-[0.2em] text-slate-500 mt-1">{group.category}</span>
+            <span className="mt-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 opacity-70 dark:text-slate-500 dark:opacity-40">{group.category}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -240,49 +240,49 @@ export default function GroupDetailsPage() {
               <Avatar 
                 key={i} 
                 src={m.user?.avatar_url} 
-                className="h-9 w-9 border-2 border-slate-950 shadow-brutalist-sm ring-1 ring-slate-800" 
+                className="h-9 w-9 border-2 border-white shadow-brutalist-sm ring-1 ring-slate-200 dark:border-slate-950 dark:ring-slate-800" 
                 fallback={m.user?.name?.slice(0, 1).toUpperCase()} 
               />
             ))}
             {members && members.length > 3 && (
-              <div className="h-9 w-9 rounded-full bg-slate-900 border-2 border-slate-950 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-brutalist-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-[10px] font-black text-slate-600 shadow-brutalist-sm dark:border-slate-950 dark:bg-slate-900 dark:text-slate-500">
                 +{members.length - 3}
               </div>
             )}
           </div>
-          <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-900 border-2 border-transparent hover:border-slate-800 transition-all">
+          <Button variant="ghost" size="icon" className="rounded-xl border-2 border-transparent transition-all hover:border-slate-200 hover:bg-slate-100 dark:hover:border-slate-800 dark:hover:bg-slate-900">
             <Settings size={20} className="stroke-[3]" />
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl space-y-10 px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl space-y-12 px-4 py-8 sm:space-y-14 sm:px-6 lg:px-8">
         <BalanceSummary netBalance={currentUserBalance} currency={group.currency || "USDC"} />
         
         <QuickActions groupId={id} />
 
-        <div className="space-y-4">
-          <div className="flex bg-slate-900 p-1.5 rounded-2xl border-2 border-slate-800 shadow-brutalist-sm overflow-x-auto no-scrollbar">
+        <div className="space-y-7">
+          <div className="flex overflow-x-auto rounded-2xl border-2 border-slate-200 bg-slate-100 p-1.5 shadow-brutalist-sm no-scrollbar dark:border-slate-800 dark:bg-slate-900">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-1 whitespace-nowrap",
+                  "flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-300 sm:px-4",
                   activeTab === tab.id 
-                    ? "bg-brand-pink text-slate-950 shadow-brutalist-sm border-2 border-slate-950/10" 
-                    : "text-slate-500 hover:text-slate-300"
+                    ? "border-2 border-slate-900/10 bg-brand-pink text-slate-950 shadow-brutalist-sm dark:border-slate-950/10" 
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-500 dark:hover:text-slate-300"
                 )}
               >
                 {React.cloneElement(tab.icon as React.ReactElement, { 
-                  className: cn("stroke-[3]", activeTab === tab.id ? "text-slate-950" : "text-slate-500") 
+                  className: cn("stroke-[3]", activeTab === tab.id ? "text-slate-950" : "text-slate-600 dark:text-slate-500") 
                 })}
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-2">
             {activeTab === "expenses" && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <ExpenseList groupId={id} currentUserId={currentUserId} />
@@ -301,7 +301,7 @@ export default function GroupDetailsPage() {
             {activeTab === "media" && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-50">Shared Media</h2>
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-slate-50">Shared Media</h2>
                   <MediaUpload groupId={id} />
                 </div>
                 <MediaGrid groupId={id} isAdmin={isAdmin} />
@@ -316,7 +316,7 @@ export default function GroupDetailsPage() {
         </div>
 
         {group.invite_code && (
-          <div className="pt-4">
+          <div className="pt-6">
             <InviteShare inviteCode={group.invite_code} groupName={group.name} />
           </div>
         )}

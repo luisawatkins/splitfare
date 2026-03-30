@@ -58,7 +58,7 @@ export default function CreateExpensePage() {
       description: "",
       amount: 0,
       date: new Date(),
-      category: "general",
+      category: "other",
       paidById: currentUserId,
       splitType: "EQUAL",
       members: [],
