@@ -44,12 +44,16 @@ export const notificationService = {
     return data as Notification;
   },
 
-  async getUserNotifications(userId: string) {
+  async getUserNotifications(userId: string, options?: { limit?: number; offset?: number }) {
+    const limit = options?.limit ?? 100;
+    const offset = options?.offset ?? 0;
+
     const { data, error } = await supabaseAdmin
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       console.error('Error fetching notifications:', error);

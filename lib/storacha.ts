@@ -4,14 +4,14 @@ import { formatCidUrl, normalizeCid } from "./cid-utils";
 type BlobLike = Blob;
 
 type StorachaClientType = {
-  uploadFile(file: BlobLike, options?: unknown): Promise<unknown>;
-  uploadCAR(car: BlobLike, options?: unknown): Promise<unknown>;
-  createSpace(name?: string, options?: unknown): Promise<unknown>;
+  uploadFile(file: BlobLike, options?: Record<string, unknown>): Promise<{ toString(): string }>;
+  uploadCAR(car: BlobLike, options?: Record<string, unknown>): Promise<{ toString(): string }>;
+  createSpace(name?: string, options?: Record<string, unknown>): Promise<{ did(): string }>;
   createDelegation?(
-    audience: unknown,
-    abilities: unknown[],
-    options?: unknown
-  ): Promise<unknown>;
+    audience: { did(): string },
+    abilities: string[],
+    options?: Record<string, unknown>
+  ): Promise<{ archive(): Promise<Uint8Array> }>;
 };
 
 type StorachaServiceOptions = {
@@ -72,9 +72,9 @@ export class StorachaService {
       throw new Error("Storacha client does not support delegations");
     }
     const delegation = await this.client.createDelegation(
-      audience,
-      abilities,
-      options
+      audience as { did(): string },
+      abilities as string[],
+      options as Record<string, unknown>
     );
     return delegation;
   }
