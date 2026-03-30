@@ -33,7 +33,7 @@ export function GroupListSkeleton({ count = 3 }: { count?: number }) {
 
 export function GroupDetailsSkeleton() {
   return (
-    <div className="container max-w-2xl py-8 space-y-8 animate-in fade-in duration-500">
+    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 sm:px-6 animate-in fade-in duration-500">
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <Skeleton className="h-10 w-10 rounded-full" />

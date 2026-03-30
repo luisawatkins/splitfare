@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useTheme } from "next-themes";
 import {
   User,
   Bell,
@@ -39,10 +40,10 @@ function SettingsRow({
     <>
       <div
         className={cn(
-          "h-11 w-11 shrink-0 rounded-2xl border-2 flex items-center justify-center",
+          "h-11 w-11 shrink-0 rounded-xl border flex items-center justify-center",
           destructive
-            ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
-            : "bg-brand-pink/10 border-brand-pink/20 text-brand-pink"
+            ? "bg-rose-50 border-rose-200 text-rose-600 dark:bg-rose-500/15 dark:border-rose-500/30 dark:text-rose-300"
+            : "bg-violet-100 border-violet-200 text-violet-700 dark:bg-violet-500/15 dark:border-violet-500/30 dark:text-violet-300"
         )}
       >
         {icon}
@@ -50,14 +51,14 @@ function SettingsRow({
       <div className="flex-1 min-w-0 text-left pt-0.5">
         <p
           className={cn(
-            "text-sm font-black uppercase tracking-wide",
-            destructive ? "text-rose-400" : "text-slate-50"
+            "text-sm font-semibold",
+            destructive ? "text-rose-600 dark:text-rose-300" : "text-slate-900 dark:text-slate-100"
           )}
         >
           {title}
         </p>
         {description ? (
-          <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
             {description}
           </p>
         ) : null}
@@ -66,7 +67,7 @@ function SettingsRow({
         <ChevronRight
           className={cn(
             "h-5 w-5 shrink-0 stroke-[2.5]",
-            destructive ? "text-rose-500/50" : "text-slate-600"
+            destructive ? "text-rose-400/60" : "text-slate-400 dark:text-slate-500"
           )}
         />
       )}
@@ -74,10 +75,10 @@ function SettingsRow({
   );
 
   const className = cn(
-    "flex items-center gap-4 w-full p-4 bg-slate-900 border-2 border-slate-800 rounded-3xl shadow-brutalist-sm transition-all",
+    "flex items-center gap-4 w-full p-4 bg-white border border-slate-200 dark:bg-slate-900 dark:border-slate-800 rounded-2xl transition-all",
     disabled
       ? "opacity-50 pointer-events-none"
-      : "hover:border-slate-700 hover:bg-slate-900/80 active:translate-y-0.5"
+      : "hover:border-slate-300 hover:bg-slate-50 dark:hover:border-slate-700 dark:hover:bg-slate-800 active:translate-y-0.5"
   );
 
   if (href) {
@@ -96,10 +97,17 @@ function SettingsRow({
 }
 
 export default function SettingsPage() {
+  const reduceMotion = useReducedMotion();
+  const { theme, setTheme } = useTheme();
   const { logout } = usePrivy();
   const { notify } = useToast();
   const { unreadCount, markAllAsRead } = useNotifications();
   const [marking, setMarking] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const onMarkAllRead = async () => {
     setMarking(true);
@@ -122,23 +130,52 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container max-w-2xl py-10 space-y-10 min-h-screen bg-slate-950 pb-24">
-      <header className="px-2 space-y-1">
-        <p className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-500">
-          App
-        </p>
-        <h1 className="text-3xl font-black tracking-tight uppercase text-slate-50">
-          Settings
-        </h1>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8">
+      <header className="mb-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400">App</p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Settings</h1>
       </header>
 
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-8 px-2"
+        className="space-y-8"
       >
         <section className="space-y-3">
-          <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-slate-500 px-1">
+          <h2 className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400 px-1">
+            Theme
+          </h2>
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 flex">
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              className={cn(
+                "flex-1 rounded-xl px-4 py-2 text-sm font-medium transition",
+                mounted && theme === "light"
+                  ? "bg-violet-600 text-white"
+                  : "text-slate-600 dark:text-slate-300"
+              )}
+            >
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              className={cn(
+                "flex-1 rounded-xl px-4 py-2 text-sm font-medium transition",
+                mounted && theme === "dark"
+                  ? "bg-violet-600 text-white"
+                  : "text-slate-600 dark:text-slate-300"
+              )}
+            >
+              Dark
+            </button>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400 px-1">
             Account
           </h2>
           <div className="space-y-2">
@@ -158,7 +195,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-slate-500 px-1">
+          <h2 className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400 px-1">
             Notifications
           </h2>
           <div className="space-y-2">
@@ -174,7 +211,7 @@ export default function SettingsPage() {
               disabled={marking || unreadCount === 0}
               trailing={
                 marking ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-brand-pink shrink-0 stroke-[2.5]" />
+                  <Loader2 className="h-5 w-5 animate-spin text-violet-600 shrink-0 stroke-[2.5]" />
                 ) : undefined
               }
             />
@@ -182,7 +219,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-slate-500 px-1">
+          <h2 className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400 px-1">
             Session
           </h2>
           <SettingsRow
@@ -195,13 +232,14 @@ export default function SettingsPage() {
           />
         </section>
 
-        <p className="text-center text-[10px] font-medium text-slate-600 pt-4">
+        <p className="text-center text-[11px] font-medium text-slate-500 dark:text-slate-400 pt-4">
           SplitFare ·{" "}
-          <Link href="/" className="text-slate-500 hover:text-brand-pink transition-colors">
+          <Link href="/" className="text-slate-500 dark:text-slate-400 hover:text-violet-600 transition-colors">
             Marketing site
           </Link>
         </p>
       </motion.div>
+      </div>
     </div>
   );
 }

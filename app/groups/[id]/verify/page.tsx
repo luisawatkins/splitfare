@@ -76,7 +76,7 @@ export default function VerificationPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl p-6 space-y-12">
+      <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 p-6 space-y-12">
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">

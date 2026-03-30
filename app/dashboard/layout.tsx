@@ -6,31 +6,37 @@ import { BottomNav } from "@/components/navigation/bottom-nav";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { BellIcon } from "@/components/notifications/bell-icon";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground font-sans">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-violet-500/30 selection:text-inherit font-sans">
       <Sidebar />
-      <div className="flex-1 flex flex-col md:max-w-[calc(100vw-256px)] min-h-screen">
-        <header className="md:hidden flex items-center justify-between p-4 border-b bg-slate-950 text-slate-50">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-brand-pink flex items-center justify-center text-slate-950 font-black text-lg border-2 border-slate-900 shadow-brutalist-sm">
+      <div className="flex min-h-screen flex-1 flex-col bg-slate-50 dark:bg-slate-950 md:max-w-[calc(100vw-17rem)]">
+        <header className="flex items-center justify-between border-b border-slate-200/90 bg-slate-50/90 p-4 dark:border-slate-800/90 dark:bg-slate-950/90 md:hidden supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-slate-950/80">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white">
               S
             </div>
-            <span className="font-black text-xl tracking-tighter uppercase">SplitFare</span>
+            <span className="bg-gradient-to-r from-slate-900 to-violet-800 bg-clip-text text-lg font-semibold tracking-tight text-transparent dark:from-white dark:to-violet-200">
+              Splitfare
+            </span>
           </div>
-          <BellIcon />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <BellIcon />
+          </div>
         </header>
-        <main className="flex-1 overflow-y-auto pb-24 md:pb-0 scroll-smooth">
+        <main className="flex-1 overflow-y-auto scroll-smooth bg-slate-50 dark:bg-slate-950 pb-24 md:pb-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.98 }}
-              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className="w-full h-full"
             >
               {children}

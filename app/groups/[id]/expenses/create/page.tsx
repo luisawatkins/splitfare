@@ -155,7 +155,7 @@ export default function CreateExpensePage() {
   const isLastStep = currentStep === steps.length - 1;
 
   return (
-    <div className="container max-w-2xl py-6 pb-24">
+    <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-6 pb-24">
       <div className="flex items-center justify-between mb-8">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <X className="h-5 w-5" />
@@ -184,7 +184,7 @@ export default function CreateExpensePage() {
           {currentStep === 3 && <StepReview members={members} />}
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t md:relative md:border-0 md:p-0">
-            <div className="container max-w-2xl flex gap-3">
+            <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 flex gap-3">
               {currentStep > 0 && (
                 <Button 
                   type="button" 

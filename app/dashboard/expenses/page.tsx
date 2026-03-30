@@ -1,214 +1,203 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import { usePrivy } from "@privy-io/react-auth";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { format, parseISO } from "date-fns";
-import {
-  Plus,
-  Receipt,
-  Tag,
-  Utensils,
-  Car,
-  Home,
-  Music,
-  ShoppingBag,
-  Zap,
-  Plane,
-  ArrowRight,
-} from "lucide-react";
-import { CATEGORIES } from "@/lib/validations/expense";
-import { Badge } from "@/components/ui/badge";
-import { fetchExpensesAcrossGroups } from "@/lib/cross-group-expenses";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Plus, Receipt, Sparkles } from "lucide-react";
 
-const categoryIcons: Record<string, typeof Tag> = {
-  general: Tag,
-  food: Utensils,
-  transport: Car,
-  housing: Home,
-  entertainment: Music,
-  shopping: ShoppingBag,
-  utilities: Zap,
-  travel: Plane,
+type ExpenseRow = {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  currency: string;
+  paidBy: string;
+  date: string;
 };
 
-function addExpenseHref(groups: { id: string }[] | undefined) {
-  if (!groups?.length) return "/groups/create";
-  if (groups.length === 1) return `/groups/${groups[0].id}/expenses/create`;
-  return "/groups";
-}
+const MOCK_ROWS: ExpenseRow[] = [
+  {
+    id: "1",
+    description: "Brunch at Sora",
+    category: "Food",
+    amount: 58.2,
+    currency: "USD",
+    paidBy: "Alex",
+    date: "Today",
+  },
+  {
+    id: "2",
+    description: "Metro passes",
+    category: "Travel",
+    amount: 24.5,
+    currency: "USD",
+    paidBy: "Mia",
+    date: "Today",
+  },
+  {
+    id: "3",
+    description: "Monthly rent transfer",
+    category: "Rent",
+    amount: 1340,
+    currency: "USD",
+    paidBy: "Priya",
+    date: "Yesterday",
+  },
+  {
+    id: "4",
+    description: "Wi-Fi + utilities",
+    category: "Utilities",
+    amount: 126.9,
+    currency: "USD",
+    paidBy: "Noah",
+    date: "Mar 28",
+  },
+];
 
-function safeFormatDate(iso: string) {
-  try {
-    return format(parseISO(iso), "MMM d, yyyy");
-  } catch {
-    return "";
-  }
-}
+const CHIP_CLASSES: Record<string, string> = {
+  Food:
+    "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/50 dark:text-orange-200 dark:border-orange-800/60",
+  Travel:
+    "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-950/50 dark:text-sky-200 dark:border-sky-800/60",
+  Rent:
+    "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-950/50 dark:text-violet-200 dark:border-violet-800/60",
+  Utilities:
+    "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-800/60",
+};
 
 export default function ExpensesPage() {
-  const { getAccessToken } = usePrivy();
+  const reduceMotion = useReducedMotion();
+  const [activeCategory, setActiveCategory] = useState<string>("All");
 
-  const { data: groups, isLoading: groupsLoading } = useQuery({
-    queryKey: ["groups"],
-    queryFn: async () => {
-      const token = await getAccessToken();
-      if (token) apiClient.setToken(token);
-      return apiClient.groups.list();
-    },
-  });
-
-  const groupsWithId = (groups ?? []).filter(
-    (g): g is typeof g & { id: string } => typeof g.id === "string" && g.id.length > 0
+  const categories = useMemo(
+    () => ["All", "Food", "Travel", "Rent", "Utilities"],
+    []
   );
-
-  const { data: expenseRows, isLoading: expensesLoading } = useQuery({
-    queryKey: ["dashboard-expenses", groupsWithId.map((g) => g.id)],
-    enabled: groupsWithId.length > 0,
-    queryFn: async () => {
-      const token = await getAccessToken();
-      if (!token) return [];
-      return fetchExpensesAcrossGroups(token, groupsWithId);
-    },
-  });
-
-  const isLoading =
-    groupsLoading || (groupsWithId.length > 0 && expensesLoading);
-  const rows = expenseRows ?? [];
-  const plusHref = addExpenseHref(groupsWithId);
+  const rows = useMemo(() => {
+    if (activeCategory === "All") return MOCK_ROWS;
+    return MOCK_ROWS.filter((row) => row.category === activeCategory);
+  }, [activeCategory]);
 
   return (
-    <div className="container max-w-2xl py-10 space-y-8 min-h-screen bg-slate-950">
-      <header className="px-2 flex items-start justify-between gap-4">
-        <div className="space-y-1 min-w-0">
-          <p className="text-[10px] font-black tracking-[0.2em] uppercase text-slate-500">
-            Overview
-          </p>
-          <h1 className="text-3xl font-black tracking-tight uppercase text-slate-50">
-            Your Expenses
-          </h1>
-        </div>
-        <Link href={plusHref} aria-label="Add expense">
-          <div className="h-12 w-12 shrink-0 rounded-full bg-brand-pink flex items-center justify-center text-slate-950 border-2 border-slate-900 shadow-brutalist-sm hover:shadow-brutalist active:translate-y-0.5 transition-all duration-200">
-            <Plus size={24} className="stroke-[3]" />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pt-8">
+        <motion.header
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="mb-6 flex items-end justify-between gap-4"
+        >
+          <div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Overview</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Expenses
+            </h1>
           </div>
-        </Link>
-      </header>
+          <button
+            type="button"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 text-sm font-semibold text-white hover:from-violet-500 hover:to-indigo-500"
+          >
+            <Plus className="h-4 w-4" />
+            Add
+          </button>
+        </motion.header>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-[4.5rem] w-full bg-slate-900 animate-pulse rounded-3xl border-2 border-slate-800"
-            />
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: reduceMotion ? 0 : 0.08, ease: "easeOut" }}
+          className="mb-4 flex gap-2 overflow-x-auto pb-1"
+        >
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setActiveCategory(category)}
+              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                activeCategory === category
+                  ? "border-violet-600 bg-violet-600 text-white dark:border-violet-500"
+                  : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+              }`}
+            >
+              {category}
+            </button>
           ))}
-        </div>
-      ) : groupsWithId.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-24 gap-6 bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[2.5rem]"
-        >
-          <Receipt className="h-14 w-14 stroke-[3] text-brand-pink" />
-          <div className="text-center space-y-1 px-6">
-            <p className="text-slate-50 font-black uppercase tracking-wide text-lg">
-              No groups yet
-            </p>
-            <p className="text-slate-500 text-sm font-medium">
-              Create a group first, then log expenses from the group or here.
-            </p>
-          </div>
-          <Link
-            href="/groups/create"
-            className="px-6 py-3 rounded-full bg-brand-pink text-slate-950 text-[11px] font-black uppercase tracking-[0.2em] border-2 border-slate-900 shadow-brutalist-sm"
-          >
-            Create group
-          </Link>
         </motion.div>
-      ) : rows.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-24 gap-6 bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[2.5rem]"
-        >
-          <Receipt className="h-14 w-14 stroke-[3] text-brand-pink" />
-          <div className="text-center space-y-1 px-6">
-            <p className="text-slate-50 font-black uppercase tracking-wide text-lg">
-              No expenses yet
-            </p>
-            <p className="text-slate-500 text-sm font-medium">
-              Tap + to add one, or open a group and use the expense flow there.
-            </p>
-          </div>
-          <Link
-            href={plusHref}
-            className="px-6 py-3 rounded-full bg-brand-pink text-slate-950 text-[11px] font-black uppercase tracking-[0.2em] border-2 border-slate-900 shadow-brutalist-sm"
-          >
-            Add expense
-          </Link>
-        </motion.div>
-      ) : (
-        <div className="space-y-3">
-          {rows.map((row, index) => {
-            const Icon = categoryIcons[row.category] || Tag;
-            const categoryMeta = CATEGORIES.find((c) => c.id === row.category);
-            const tagLabel = (categoryMeta?.id ?? row.category).toUpperCase();
 
-            return (
-              <motion.div
-                key={`${row.groupId}-${row.id}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
+        <AnimatePresence mode="wait">
+          {rows.length === 0 ? (
+            <motion.section
+              key="empty"
+              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center dark:border-slate-700 dark:bg-slate-900"
+            >
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
+                <Sparkles className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Nothing here yet</h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Try a different filter or add your first expense.
+              </p>
+              <button
+                type="button"
+                className="mt-4 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white"
               >
-                <Link href={`/groups/${row.groupId}/expenses/${row.id}`}>
-                  <div className="flex items-center gap-4 p-4 bg-slate-900 border-2 border-slate-800 rounded-3xl hover:border-slate-700 hover:bg-slate-900/80 active:translate-y-0.5 transition-all duration-200 shadow-brutalist-sm group">
-                    <div className="h-12 w-12 rounded-2xl flex items-center justify-center border-2 shrink-0 bg-brand-pink/10 border-brand-pink/20 text-brand-pink">
-                      <Icon size={20} className="stroke-[3]" />
+                Add Expense
+              </button>
+            </motion.section>
+          ) : (
+            <motion.section
+              key="list"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0 }}
+              className="space-y-3"
+            >
+              {rows.map((row, index) => (
+                <motion.article
+                  key={row.id}
+                  initial={reduceMotion ? false : { opacity: 0, x: -24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: "easeOut",
+                    delay: reduceMotion ? 0 : index * 0.08,
+                  }}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <Receipt className="h-5 w-5" />
                     </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-slate-50 font-black text-sm truncate uppercase tracking-wide">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {row.description}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <Badge
-                          variant="secondary"
-                          className="text-[9px] px-1.5 py-0 h-4 uppercase font-black tracking-wider bg-slate-800 text-slate-300 border border-slate-700"
+                      <div className="mt-1 flex items-center gap-2">
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                            CHIP_CLASSES[row.category]
+                          }`}
                         >
-                          {tagLabel}
-                        </Badge>
-                        <span className="text-slate-500 text-[11px] font-medium truncate">
-                          {safeFormatDate(row.created_at)}
-                          {row.paidByName ? ` · Paid by ${row.paidByName}` : ""}
-                          {" · "}
-                          {row.groupName}
+                          {row.category}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {row.date} • Paid by {row.paidBy}
                         </span>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <p className="text-sm font-black text-brand-pink tabular-nums">
-                        {row.total_amount.toLocaleString(undefined, {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 2,
-                        })}{" "}
-                        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                          {row.currency}
-                        </span>
-                      </p>
-                      <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-slate-300 transition-colors stroke-[2.5]" />
-                    </div>
+                    <p className="min-w-[110px] text-right font-mono text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                      {row.currency} {row.amount.toFixed(2)}
+                    </p>
                   </div>
-                </Link>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+                </motion.article>
+              ))}
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

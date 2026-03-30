@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Wallet, ShieldCheck, Zap, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import { getPrivyProfile } from '@/lib/privy-profile';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function ENSOnboardingPage() {
   const [validSubdomain, setValidSubdomain] = useState('');
@@ -73,7 +74,10 @@ export default function ENSOnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+    <div className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="absolute top-4 right-4 z-20 sm:top-6 sm:right-6">
+        <ThemeToggle />
+      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

@@ -60,7 +60,7 @@ export default function GroupMediaPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl p-6 space-y-8">
+      <main className="mx-auto max-w-6xl p-6 space-y-8">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h2 className="text-2xl font-black uppercase tracking-tight text-slate-50">Media Gallery</h2>
