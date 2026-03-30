@@ -34,9 +34,11 @@ export function useChainBalances() {
 
   const usdcBalance = balancesQuery.data?.find((b) => b.symbol === 'USDC');
 
-  const bestChain = usdcBalance?.breakdown.reduce((prev, current) => {
-    return parseFloat(current.balance) > parseFloat(prev.balance) ? current : prev;
-  }, usdcBalance.breakdown[0]);
+  const bestChain = usdcBalance?.breakdown?.length
+    ? usdcBalance.breakdown.reduce((prev, current) =>
+        parseFloat(current.balance) > parseFloat(prev.balance) ? current : prev
+      )
+    : undefined;
 
   return {
     balances: balancesQuery.data,

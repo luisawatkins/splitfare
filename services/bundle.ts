@@ -102,16 +102,15 @@ export class GroupBundleService {
       date: m.created_at,
     }));
 
-    // 5. Construct the bundle
+    const allTimestamps = [
+      ...ipldExpenses.map(e => new Date(e.date).getTime()),
+      ...ipldSettlements.map(s => new Date(s.date).getTime()),
+      ...ipldSharedMedia.map(m => new Date(m.date).getTime()),
+    ];
     const bundle: IPLDGroupBundle = {
       groupId,
       groupName: group.name,
-      timestamp: Math.max(
-        ...ipldExpenses.map(e => new Date(e.date).getTime()),
-        ...ipldSettlements.map(s => new Date(s.date).getTime()),
-        ...ipldSharedMedia.map(m => new Date(m.date).getTime()),
-        0
-      ),
+      timestamp: allTimestamps.length > 0 ? Math.max(...allTimestamps) : Date.now(),
       members: ipldMembers.sort((a, b) => a.id.localeCompare(b.id)),
       expenses: ipldExpenses.sort((a, b) => a.date.localeCompare(b.date)),
       settlements: ipldSettlements.sort((a, b) => a.date.localeCompare(b.date)),

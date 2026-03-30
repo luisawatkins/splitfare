@@ -12,7 +12,8 @@ export type CrossGroupExpenseRow = {
 
 export async function fetchExpensesAcrossGroups(
   token: string,
-  groups: { id: string; name: string; currency?: string | null }[]
+  groups: { id: string; name: string; currency?: string | null }[],
+  baseUrl: string = typeof window !== 'undefined' ? window.location.origin : ''
 ): Promise<CrossGroupExpenseRow[]> {
   const rows: CrossGroupExpenseRow[] = [];
 
@@ -21,7 +22,7 @@ export async function fetchExpensesAcrossGroups(
       if (!g.id) return;
       try {
         const res = await fetch(
-          `/api/groups/${g.id}/expenses?limit=100&sortBy=date&sortOrder=desc`,
+          `${baseUrl}/api/groups/${g.id}/expenses?limit=100&sortBy=date&sortOrder=desc`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const json = await res.json();

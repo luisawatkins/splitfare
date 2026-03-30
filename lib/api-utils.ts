@@ -11,6 +11,12 @@ declare global {
 }
 
 if (!privyAppId || !privyAppSecret) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'FATAL: PRIVY_APP_ID and PRIVY_APP_SECRET must be configured in production. ' +
+      'API auth cannot fall back to unsigned JWT decode in production.'
+    );
+  }
   if (!globalThis.__splitfarePrivyEnvWarned) {
     console.warn(
       "PRIVY_APP_SECRET (and app id) are not set. API auth falls back to unsigned JWT decode only — use Privy verify in production."
@@ -183,12 +189,13 @@ export const withMiddleware = <T = Request>(handler: ApiHandler<T>, options?: { 
 
       let finalHandler: ApiHandler<any> = handler;
 
-      if (options?.validation) {
-        finalHandler = withValidation(options.validation.schema, finalHandler);
-      }
-
+      // Auth must wrap BEFORE validation so it runs first (outermost = first to execute)
       if (options?.auth) {
         finalHandler = withAuth(finalHandler);
+      }
+
+      if (options?.validation) {
+        finalHandler = withValidation(options.validation.schema, finalHandler);
       }
 
       response = await (finalHandler as ApiHandler<Request>)(req, context);
