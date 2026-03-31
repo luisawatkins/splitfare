@@ -3,6 +3,15 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Plus, Receipt, Sparkles } from "lucide-react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { resolvePrivyAccessToken, SIGN_IN_REQUIRED } from "@/lib/privy-token";
+import {
+  fetchExpensesAcrossGroups,
+  type CrossGroupExpenseRow,
+} from "@/lib/cross-group-expenses";
 
 type ExpenseRow = {
   id: string;
@@ -14,44 +23,11 @@ type ExpenseRow = {
   date: string;
 };
 
-const MOCK_ROWS: ExpenseRow[] = [
-  {
-    id: "1",
-    description: "Brunch at Sora",
-    category: "Food",
-    amount: 58.2,
-    currency: "USD",
-    paidBy: "Alex",
-    date: "Today",
-  },
-  {
-    id: "2",
-    description: "Metro passes",
-    category: "Travel",
-    amount: 24.5,
-    currency: "USD",
-    paidBy: "Mia",
-    date: "Today",
-  },
-  {
-    id: "3",
-    description: "Monthly rent transfer",
-    category: "Rent",
-    amount: 1340,
-    currency: "USD",
-    paidBy: "Priya",
-    date: "Yesterday",
-  },
-  {
-    id: "4",
-    description: "Wi-Fi + utilities",
-    category: "Utilities",
-    amount: 126.9,
-    currency: "USD",
-    paidBy: "Noah",
-    date: "Mar 28",
-  },
-];
+type GroupLite = {
+  id: string;
+  name: string;
+  currency?: string | null;
+};
 
 const CHIP_CLASSES: Record<string, string> = {
   Food:
@@ -64,18 +40,132 @@ const CHIP_CLASSES: Record<string, string> = {
     "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-800/60",
 };
 
+function toTitleCase(value: string) {
+  if (!value) return "Other";
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function toRelativeDateLabel(iso: string) {
+  const value = new Date(iso);
+  if (Number.isNaN(value.getTime())) return "Recently";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  const diffDays = Math.floor((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return value.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 export default function ExpensesPage() {
   const reduceMotion = useReducedMotion();
+  const { ready, authenticated, login, getAccessToken } = usePrivy();
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["dashboard-expenses-data"],
+    queryFn: async () => {
+      const token = await resolvePrivyAccessToken(getAccessToken);
+      if (!token) {
+        throw new Error(SIGN_IN_REQUIRED);
+      }
+      const groupsRes = await fetch("/api/groups", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const groupsJson = await groupsRes.json();
+      if (!groupsRes.ok || !groupsJson.success) {
+        throw new Error(groupsJson?.error?.message || "Failed to load groups");
+      }
+      const groups = (groupsJson.data ?? []) as GroupLite[];
+      const expenseRows = await fetchExpensesAcrossGroups(token, groups);
+      const uiRows: ExpenseRow[] = (expenseRows as CrossGroupExpenseRow[]).map((row) => ({
+        id: row.id,
+        description: row.description?.trim() || "Expense",
+        category: toTitleCase(row.category),
+        amount: Number(row.total_amount),
+        currency: row.currency || "USDC",
+        paidBy: row.paidByName || "Unknown",
+        date: toRelativeDateLabel(row.created_at),
+      }));
+      return uiRows;
+    },
+    enabled: ready && authenticated,
+    retry: false,
+  });
+
+  const liveRows = useMemo(() => data ?? [], [data]);
   const categories = useMemo(
-    () => ["All", "Food", "Travel", "Rent", "Utilities"],
-    []
+    () => ["All", ...Array.from(new Set(liveRows.map((row) => row.category)))],
+    [liveRows]
   );
   const rows = useMemo(() => {
-    if (activeCategory === "All") return MOCK_ROWS;
-    return MOCK_ROWS.filter((row) => row.category === activeCategory);
-  }, [activeCategory]);
+    if (activeCategory === "All") return liveRows;
+    return liveRows.filter((row) => row.category === activeCategory);
+  }, [activeCategory, liveRows]);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:pt-8">
+          <div className="h-10 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 text-center sm:px-6 sm:pt-8">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            Sign in to view expenses
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Your latest shared expenses appear here.
+          </p>
+          <Button className="mt-5" onClick={() => login()}>
+            Sign in
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="mx-auto w-full max-w-6xl space-y-3 px-4 pb-28 pt-6 sm:px-6 sm:pt-8">
+          <div className="h-24 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+          <div className="h-20 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+          <div className="h-20 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    const needsSignIn = error instanceof Error && error.message === SIGN_IN_REQUIRED;
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-6 text-center sm:px-6 sm:pt-8">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            Could not load expenses
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            {needsSignIn
+              ? "Your session expired. Sign in again to continue."
+              : "Please retry and we will refresh your latest expenses."}
+          </p>
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <Button variant="outline" onClick={() => refetch()}>
+              Retry
+            </Button>
+            {needsSignIn && <Button onClick={() => login()}>Sign in</Button>}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -92,13 +182,13 @@ export default function ExpensesPage() {
               Expenses
             </h1>
           </div>
-          <button
-            type="button"
+          <Link
+            href="/groups"
             className="inline-flex h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 text-sm font-semibold text-white hover:from-violet-500 hover:to-indigo-500"
           >
             <Plus className="h-4 w-4" />
             Add
-          </button>
+          </Link>
         </motion.header>
 
         <motion.div
@@ -178,7 +268,8 @@ export default function ExpensesPage() {
                       <div className="mt-1 flex items-center gap-2">
                         <span
                           className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                            CHIP_CLASSES[row.category]
+                            CHIP_CLASSES[row.category] ||
+                            "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                           }`}
                         >
                           {row.category}
