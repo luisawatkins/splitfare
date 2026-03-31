@@ -11,6 +11,7 @@ import { Button } from './ui/button';
 import { useToast } from './ui/toast';
 import { usePrivy } from '@privy-io/react-auth';
 import { toDbUserId } from '@/lib/privy-utils';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 interface MediaGridProps {
   groupId: string;
@@ -18,7 +19,7 @@ interface MediaGridProps {
 }
 
 export function MediaGrid({ groupId, isAdmin }: MediaGridProps) {
-  const { user } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const currentUserId = user ? toDbUserId(user.id) : null;
   const { notify } = useToast();
   const {
@@ -47,8 +48,12 @@ export function MediaGrid({ groupId, isAdmin }: MediaGridProps) {
     if (!confirm('Are you sure you want to delete this media?')) return;
 
     try {
+      const token = await getAccessToken();
       const res = await fetch(`/api/groups/${groupId}/media/${mediaId}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) throw new Error('Failed to delete media');
@@ -105,7 +110,7 @@ export function MediaGrid({ groupId, isAdmin }: MediaGridProps) {
             >
               {isImage ? (
                 <img
-                  src={`https://storacha.link/ipfs/${media.cid}`}
+                  src={resolveMediaUrl(media.cid)}
                   alt={media.title || 'Media'}
                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                   loading="lazy"
@@ -126,7 +131,7 @@ export function MediaGrid({ groupId, isAdmin }: MediaGridProps) {
                   className="h-8 w-8 rounded-full"
                   asChild
                 >
-                  <a href={`https://storacha.link/ipfs/${media.cid}`} download={media.title} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <a href={resolveMediaUrl(media.cid)} download={media.title} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                     <Download className="h-4 w-4" />
                   </a>
                 </Button>

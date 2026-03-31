@@ -5,6 +5,7 @@ import { ExternalLink, Maximize2, ZoomIn, ZoomOut, RotateCcw } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
+import { resolveMediaUrl } from "@/lib/media-url";
 
 interface ReceiptViewerProps {
   cid: string;
@@ -15,8 +16,8 @@ export function ReceiptViewer({ cid, className }: ReceiptViewerProps) {
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
-  const gatewayUrl = `https://storacha.link/ipfs/${cid}`;
-  const ipfsUrl = `https://ipfs.io/ipfs/${cid}`;
+  const gatewayUrl = resolveMediaUrl(cid);
+  const ipfsUrl = resolveMediaUrl(cid);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
   const zoomIn = () => setZoom(prev => Math.min(prev + 0.5, 3));

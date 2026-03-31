@@ -19,6 +19,7 @@ import {
 import { Button } from './ui/button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/cn';
+import { resolveMediaUrl } from '@/lib/media-url';
 
 interface MediaViewerProps {
   mediaList: SharedMedia[];
@@ -105,12 +106,12 @@ export function MediaViewer({
 
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" asChild>
-            <a href={`https://storacha.link/ipfs/${currentMedia.cid}`} download={currentMedia.title} target="_blank" rel="noopener noreferrer">
+            <a href={resolveMediaUrl(currentMedia.cid)} download={currentMedia.title} target="_blank" rel="noopener noreferrer">
               <Download className="h-5 w-5" />
             </a>
           </Button>
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" asChild>
-            <a href={`https://storacha.link/ipfs/${currentMedia.cid}`} target="_blank" rel="noopener noreferrer">
+            <a href={resolveMediaUrl(currentMedia.cid)} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-5 w-5" />
             </a>
           </Button>
@@ -157,7 +158,7 @@ export function MediaViewer({
           >
             {isImage ? (
               <img
-                src={`https://storacha.link/ipfs/${currentMedia.cid}`}
+                src={resolveMediaUrl(currentMedia.cid)}
                 alt={currentMedia.title || 'Media'}
                 className="max-h-full max-w-full object-contain shadow-2xl"
               />
@@ -171,7 +172,7 @@ export function MediaViewer({
                   <p className="text-sm text-white/60 uppercase tracking-widest">{currentMedia.media_type}</p>
                 </div>
                 <Button className="w-full" asChild>
-                  <a href={`https://storacha.link/ipfs/${currentMedia.cid}`} target="_blank" rel="noopener noreferrer">
+                  <a href={resolveMediaUrl(currentMedia.cid)} target="_blank" rel="noopener noreferrer">
                     Open in Browser
                   </a>
                 </Button>

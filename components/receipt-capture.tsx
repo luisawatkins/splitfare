@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useReceiptUpload } from "@/hooks/useReceiptUpload";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
+import { resolveMediaUrl } from "@/lib/media-url";
 
 interface ReceiptCaptureProps {
   onUploadSuccess: (cid: string) => void;
@@ -47,7 +48,7 @@ export function ReceiptCapture({ onUploadSuccess, initialCid }: ReceiptCapturePr
         {localPreview || initialCid ? (
           <div className="relative rounded-xl overflow-hidden border bg-muted aspect-[3/4] transition-all">
             <Image
-              src={localPreview || `https://storacha.link/ipfs/${initialCid}`}
+              src={localPreview || resolveMediaUrl(initialCid || "")}
               alt="Receipt preview"
               fill
               className="object-contain"
