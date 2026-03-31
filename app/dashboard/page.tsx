@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { usePrivy } from "@privy-io/react-auth";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   Plus,
   Receipt,
@@ -13,6 +17,11 @@ import {
   ChevronDown,
   TrendingUp,
 } from "lucide-react";
+import { resolvePrivyAccessToken, SIGN_IN_REQUIRED } from "@/lib/privy-token";
+import {
+  fetchExpensesAcrossGroups,
+  type CrossGroupExpenseRow,
+} from "@/lib/cross-group-expenses";
 
 type Person = {
   id: string;
@@ -29,68 +38,13 @@ type Expense = {
   createdAt: string;
 };
 
-type Group = {
+type UiGroup = {
   id: string;
   name: string;
-  members: Person[];
+  members: Person[]; 
   balance: number;
   currency: string;
 };
-
-const MOCK_GROUPS: Group[] = [
-  {
-    id: "g1",
-    name: "Lisbon Trip",
-    currency: "USD",
-    balance: 182.4,
-    members: [
-      { id: "u1", name: "Alex Kim" },
-      { id: "u2", name: "Priya Patel" },
-      { id: "u3", name: "Noah Smith" },
-    ],
-  },
-  {
-    id: "g2",
-    name: "Apartment 24B",
-    currency: "USD",
-    balance: -94.7,
-    members: [
-      { id: "u1", name: "Alex Kim" },
-      { id: "u4", name: "Mia Wong" },
-      { id: "u5", name: "Leo Garcia" },
-    ],
-  },
-];
-
-const MOCK_EXPENSES: Expense[] = [
-  {
-    id: "e1",
-    description: "Dinner at Fado Club",
-    amount: 124.6,
-    currency: "USD",
-    category: "Food",
-    paidBy: "Priya Patel",
-    createdAt: "Today",
-  },
-  {
-    id: "e2",
-    description: "Airport Taxi",
-    amount: 48.0,
-    currency: "USD",
-    category: "Travel",
-    paidBy: "Alex Kim",
-    createdAt: "Today",
-  },
-  {
-    id: "e3",
-    description: "Electricity Bill",
-    amount: 92.2,
-    currency: "USD",
-    category: "Utilities",
-    paidBy: "Mia Wong",
-    createdAt: "Yesterday",
-  },
-];
 
 const CATEGORY_STYLES: Record<
   string,
@@ -151,6 +105,23 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
+function toTitleCase(value: string) {
+  if (!value) return "Other";
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function toRelativeDateLabel(iso: string) {
+  const value = new Date(iso);
+  if (Number.isNaN(value.getTime())) return "Recently";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  const diffDays = Math.floor((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return value.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 function CountUp({ value }: { value: number }) {
   const reduceMotion = useReducedMotion();
   const [shown, setShown] = useState(value);
@@ -179,6 +150,7 @@ function CountUp({ value }: { value: number }) {
 
 export default function DashboardPage() {
   const reduceMotion = useReducedMotion();
+  const { ready, authenticated, login, getAccessToken } = usePrivy();
   const [tab, setTab] = useState<"overview" | "balances">("overview");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pulseFab, setPulseFab] = useState(true);
@@ -189,16 +161,148 @@ export default function DashboardPage() {
     return () => clearTimeout(timer);
   }, [reduceMotion]);
 
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["dashboard-data"],
+    queryFn: async () => {
+      const token = await resolvePrivyAccessToken(getAccessToken);
+      if (!token) {
+        throw new Error(SIGN_IN_REQUIRED);
+      }
+
+      const groupsRes = await fetch("/api/groups", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const groupsJson = await groupsRes.json();
+      if (!groupsRes.ok || !groupsJson.success) {
+        throw new Error(groupsJson?.error?.message || "Failed to load groups");
+      }
+
+      const groups = (groupsJson.data ?? []) as Array<{
+        id: string;
+        name: string;
+        currency?: string | null;
+      }>;
+
+      const [expenseRows, balanceRows] = await Promise.all([
+        fetchExpensesAcrossGroups(token, groups),
+        Promise.all(
+          groups.map(async (group) => {
+            try {
+              const res = await fetch(`/api/groups/${group.id}/balances`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const json = await res.json();
+              if (!res.ok || !json.success || !json.data) return null;
+              return { groupId: group.id, balances: json.data };
+            } catch {
+              return null;
+            }
+          })
+        ),
+      ]);
+
+      const balancesByGroup = new Map(
+        balanceRows
+          .filter((row): row is { groupId: string; balances: any } => Boolean(row))
+          .map((row) => [row.groupId, row.balances])
+      );
+
+      const uiGroups: UiGroup[] = groups.map((group) => {
+        const balanceData = balancesByGroup.get(group.id);
+        const members: Person[] = (balanceData?.memberBalances ?? []).map((member: any) => ({
+          id: member.userId,
+          name: member.name ?? "Member",
+        }));
+        return {
+          id: group.id,
+          name: group.name,
+          currency: group.currency ?? "USDC",
+          members,
+          balance: Number(balanceData?.userBalance?.balance ?? 0),
+        };
+      });
+
+      const uiExpenses: Expense[] = (expenseRows as CrossGroupExpenseRow[]).map((row) => ({
+        id: row.id,
+        description: row.description,
+        amount: Number(row.total_amount),
+        currency: row.currency || "USDC",
+        category: toTitleCase(row.category),
+        paidBy: row.paidByName || "Unknown",
+        createdAt: toRelativeDateLabel(row.created_at),
+      }));
+
+      return { groups: uiGroups, expenses: uiExpenses };
+    },
+    enabled: ready && authenticated,
+    retry: false,
+  });
+
+  const liveGroups = useMemo(() => data?.groups ?? [], [data]);
+  const liveExpenses = useMemo(() => data?.expenses ?? [], [data]);
+
   const total = useMemo(
-    () => MOCK_GROUPS.reduce((sum, group) => sum + group.balance, 0),
-    []
+    () => liveGroups.reduce((sum, group) => sum + group.balance, 0),
+    [liveGroups]
   );
   const owed = useMemo(
-    () => MOCK_GROUPS.filter((group) => group.balance > 0).length,
-    []
+    () => liveGroups.filter((group) => group.balance > 0).length,
+    [liveGroups]
   );
 
   const defaultCat = CATEGORY_STYLES.Food;
+
+  if (!ready) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+        <div className="h-10 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+      </div>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-14 text-center sm:px-6">
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Sign in to view your dashboard</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          Your balances and recent expenses will appear here after authentication.
+        </p>
+        <Button className="mt-5" onClick={() => login()}>
+          Sign in
+        </Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+        <div className="space-y-3">
+          <div className="h-24 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+          <div className="h-20 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+          <div className="h-20 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    const needsSignIn = error instanceof Error && error.message === SIGN_IN_REQUIRED;
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-14 text-center sm:px-6">
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Could not load dashboard</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          {needsSignIn ? "Your session expired. Sign in again to continue." : "Please retry and we will refresh your latest balances."}
+        </p>
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <Button variant="outline" onClick={() => refetch()}>
+            Retry
+          </Button>
+          {needsSignIn && <Button onClick={() => login()}>Sign in</Button>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
@@ -299,7 +403,7 @@ export default function DashboardPage() {
               transition={{ duration: 0.2 }}
               className="space-y-3"
             >
-              {MOCK_EXPENSES.map((expense, index) => {
+              {liveExpenses.map((expense, index) => {
                 const meta =
                   CATEGORY_STYLES[expense.category] ?? {
                     ...defaultCat,
@@ -364,7 +468,7 @@ export default function DashboardPage() {
               transition={{ duration: 0.2 }}
               className="space-y-4"
             >
-              {MOCK_GROUPS.map((group, index) => (
+              {liveGroups.map((group, index) => (
                 <motion.article
                   key={group.id}
                   initial={reduceMotion ? false : { opacity: 0, y: 14 }}
@@ -410,7 +514,7 @@ export default function DashboardPage() {
           )}
         </AnimatePresence>
 
-        {!MOCK_EXPENSES.length && (
+        {!liveExpenses.length && (
           <section className="mt-8 rounded-[1.25rem] border border-dashed border-slate-300/90 bg-white/80 px-6 py-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 dark:bg-violet-950/50">
               <Sparkles className="h-7 w-7 text-violet-600 dark:text-violet-400" />
@@ -421,13 +525,12 @@ export default function DashboardPage() {
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
               Start with your first shared payment and track balances in real time.
             </p>
-            <button
-              type="button"
-              className="mt-5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white"
-              onClick={() => setIsModalOpen(true)}
+            <Link
+              href="/groups"
+              className="mt-5 inline-block rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white"
             >
-              Add first expense
-            </button>
+              Go to groups
+            </Link>
           </section>
         )}
 
