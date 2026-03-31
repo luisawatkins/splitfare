@@ -7,6 +7,8 @@ type StorachaClientType = {
   uploadFile(file: BlobLike, options?: Record<string, unknown>): Promise<{ toString(): string }>;
   uploadCAR(car: BlobLike, options?: Record<string, unknown>): Promise<{ toString(): string }>;
   createSpace(name?: string, options?: Record<string, unknown>): Promise<{ did(): string }>;
+  currentSpace?: () => { did(): string } | string | undefined | null;
+  setCurrentSpace?: (spaceDid: string) => Promise<void> | void;
   createDelegation?(
     audience: { did(): string },
     abilities: string[],
@@ -32,13 +34,16 @@ function cidToString(value: unknown): string {
 export class StorachaService {
   private readonly client: StorachaClientType;
   private readonly gatewayHost: string;
+  private readonly defaultSpaceName: string;
 
   constructor(client: StorachaClientType, options?: StorachaServiceOptions) {
     this.client = client;
     this.gatewayHost = options?.gatewayHost ?? "storacha.link";
+    this.defaultSpaceName = "splitfare-default-space";
   }
 
   async uploadFile(file: BlobLike): Promise<string> {
+    await this.ensureCurrentSpace();
     const cid = await this.client.uploadFile(file);
     return cidToString(cid);
   }
@@ -50,8 +55,27 @@ export class StorachaService {
   }
 
   async uploadCar(car: BlobLike): Promise<string> {
+    await this.ensureCurrentSpace();
     const cid = await this.client.uploadCAR(car);
     return cidToString(cid);
+  }
+
+  private async ensureCurrentSpace(): Promise<void> {
+    // Older/mock clients may not expose space-management APIs.
+    if (!this.client.currentSpace && !this.client.setCurrentSpace) {
+      return;
+    }
+
+    const currentSpace = this.client.currentSpace?.();
+    if (currentSpace) return;
+
+    const createdSpace = await this.client.createSpace(this.defaultSpaceName);
+    const createdDid = typeof createdSpace?.did === "function" ? createdSpace.did() : String(createdSpace?.did ?? "");
+    if (!createdDid) return;
+
+    if (this.client.setCurrentSpace) {
+      await this.client.setCurrentSpace(createdDid);
+    }
   }
 
   gatewayUrl(cid: string, path?: string): string {

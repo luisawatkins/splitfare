@@ -52,4 +52,4 @@ const deleteMedia = async (req: AuthenticatedRequest, { params }: { params: { id
   }
 };
 
-export const DELETE = withMiddleware(deleteMedia);
+export const DELETE = withMiddleware(deleteMedia, { auth: true });

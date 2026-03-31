@@ -9,6 +9,7 @@ import { uploadReceipt, UploadProgress } from '@/services/receipt-upload';
 import { Plus, X, FileText, Image as ImageIcon, Loader2, Link as LinkIcon } from 'lucide-react';
 import { useToast } from './ui/toast';
 import { useQuery } from '@tanstack/react-query';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface MediaUploadProps {
   groupId: string;
@@ -26,18 +27,25 @@ export function MediaUpload({ groupId, onSuccess }: MediaUploadProps) {
   const [files, setFiles] = useState<FileWithProgress[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const { notify } = useToast();
+  const { getAccessToken } = usePrivy();
 
   const { data: expensesRes } = useQuery({
     queryKey: ['expenses', groupId],
     queryFn: async () => {
-      const res = await fetch(`/api/groups/${groupId}/expenses`);
+      const token = await getAccessToken();
+      const res = await fetch(`/api/groups/${groupId}/expenses`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!res.ok) throw new Error('Failed to fetch expenses');
-      return res.json();
+      const payload = await res.json();
+      return payload.data;
     },
     enabled: isOpen,
   });
 
-  const expenses = expensesRes?.data || [];
+  const expenses = expensesRes?.items || [];
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles = acceptedFiles.map(file => ({
@@ -69,13 +77,17 @@ export function MediaUpload({ groupId, onSuccess }: MediaUploadProps) {
 
     const uploadPromises = files.map(async (fileData, index) => {
       try {
+        const token = await getAccessToken();
         const cid = await uploadReceipt(fileData.file, (p) => {
           setFiles(prev => prev.map((f, i) => i === index ? { ...f, progress: p } : f));
         });
 
         const res = await fetch(`/api/groups/${groupId}/media`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             cid,
             media_type: fileData.file.type,

@@ -1,5 +1,3 @@
-import { getBrowserStorachaService } from "@/lib/storacha";
-
 const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/heic", "application/pdf"];
 
@@ -70,9 +68,21 @@ export async function uploadReceipt(
     const compressedBlob = await compressImage(file);
     
     onProgress({ status: "uploading", progress: 30 });
-    const service = await getBrowserStorachaService();
-    
-    const cid = await service.uploadFile(compressedBlob as Blob);
+    const fileToUpload = new File([compressedBlob], file.name, {
+      type: compressedBlob.type || file.type || "application/octet-stream",
+    });
+    const formData = new FormData();
+    formData.append("file", fileToUpload);
+
+    const uploadRes = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const uploadPayload = await uploadRes.json();
+    if (!uploadRes.ok || !uploadPayload?.success || !uploadPayload?.data?.cid) {
+      throw new Error(uploadPayload?.error?.message || uploadPayload?.data?.error || "Upload failed");
+    }
+    const cid = uploadPayload.data.cid as string;
     
     onProgress({ status: "success", progress: 100, cid });
     return cid;

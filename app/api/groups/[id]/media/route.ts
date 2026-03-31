@@ -107,5 +107,5 @@ const createMedia = async (req: AuthenticatedRequest, { params }: { params: { id
   }
 };
 
-export const GET = withMiddleware(listMedia);
-export const POST = withMiddleware(createMedia);
+export const GET = withMiddleware(listMedia, { auth: true });
+export const POST = withMiddleware(createMedia, { auth: true });
