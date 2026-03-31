@@ -9,9 +9,11 @@ import { cn } from '@/lib/cn';
 interface ENSInputProps {
   onValidSubdomain?: (subdomain: string) => void;
   className?: string;
+  /** Merged into the inner text field (e.g. height, radius) */
+  inputClassName?: string;
 }
 
-export function ENSInput({ onValidSubdomain, className }: ENSInputProps) {
+export function ENSInput({ onValidSubdomain, className, inputClassName }: ENSInputProps) {
   const { 
     subdomain, 
     setSubdomain, 
@@ -42,6 +44,7 @@ export function ENSInput({ onValidSubdomain, className }: ENSInputProps) {
           onChange={handleChange}
           className={cn(
             "pr-32 text-lg font-medium",
+            inputClassName,
             subdomain && !validation.valid && "border-red-500 focus-visible:ring-red-500",
             subdomain && validation.valid && isAvailable && "border-green-500 focus-visible:ring-green-500"
           )}
