@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePrivy } from "@privy-io/react-auth";
 import { apiClient } from "@/lib/api-client";
 import { Notification } from "@/lib/validations";
+import { resolvePrivyAccessToken } from "@/lib/privy-token";
 
 export function useNotifications() {
   const { authenticated, ready, getAccessToken } = usePrivy();
@@ -13,7 +14,7 @@ export function useNotifications() {
   const fetchNotifications = useCallback(async (): Promise<Notification[]> => {
     if (!authenticated) return [];
 
-    const token = await getAccessToken();
+    const token = await resolvePrivyAccessToken(getAccessToken);
     if (!token) return [];
 
     apiClient.setToken(token);
@@ -21,16 +22,16 @@ export function useNotifications() {
   }, [authenticated, getAccessToken]);
 
   const notificationsQuery = useQuery<Notification[]>({
-    queryKey: ["notifications"],
+    queryKey: ["notifications", authenticated],
     queryFn: fetchNotifications,
-    enabled: ready,
+    enabled: ready && authenticated,
     refetchInterval: authenticated ? 30000 : false,
     refetchOnWindowFocus: false,
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = await getAccessToken();
+      const token = await resolvePrivyAccessToken(getAccessToken);
       if (!token) return;
 
       apiClient.setToken(token);
@@ -43,7 +44,7 @@ export function useNotifications() {
 
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const token = await getAccessToken();
+      const token = await resolvePrivyAccessToken(getAccessToken);
       if (!token) return;
 
       apiClient.setToken(token);

@@ -152,7 +152,6 @@ export default function DashboardPage() {
   const reduceMotion = useReducedMotion();
   const { ready, authenticated, login, getAccessToken } = usePrivy();
   const [tab, setTab] = useState<"overview" | "balances">("overview");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [pulseFab, setPulseFab] = useState(true);
 
   useEffect(() => {
@@ -236,6 +235,9 @@ export default function DashboardPage() {
     },
     enabled: ready && authenticated,
     retry: false,
+    refetchInterval: 15000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   const liveGroups = useMemo(() => data?.groups ?? [], [data]);
@@ -537,7 +539,9 @@ export default function DashboardPage() {
         <motion.button
           type="button"
           aria-label="Add Expense"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            window.location.href = "/groups";
+          }}
           initial={reduceMotion ? false : { opacity: 0, y: 16 }}
           animate={
             pulseFab && !reduceMotion
@@ -551,70 +555,6 @@ export default function DashboardPage() {
           Add Expense
         </motion.button>
       </div>
-
-      <AnimatePresence>
-        {isModalOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 p-4 sm:items-center dark:bg-slate-950/60"
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduceMotion ? undefined : { opacity: 0 }}
-            onClick={() => setIsModalOpen(false)}
-          >
-            <motion.div
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="w-full max-w-md rounded-[1.35rem] border border-slate-200/90 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mb-5 flex items-center gap-3">
-                <div className="rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 p-2.5 text-violet-700 dark:from-violet-950/80 dark:to-indigo-950/80 dark:text-violet-300">
-                  <Receipt className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    Quick add expense
-                  </h3>
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400">
-                    Mock flow for prototype
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <input
-                  readOnly
-                  value="Team lunch"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
-                />
-                <input
-                  readOnly
-                  value="USD 86.00"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200"
-                />
-              </div>
-              <div className="mt-5 flex gap-2">
-                <button
-                  type="button"
-                  className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  <span className="relative z-10">Settle up</span>
-                  <span className="pointer-events-none absolute inset-0 -translate-x-full bg-white/25 transition-transform duration-300 ease-out group-hover:translate-x-full" />
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
