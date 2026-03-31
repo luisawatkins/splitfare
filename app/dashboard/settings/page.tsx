@@ -16,6 +16,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { cn } from "@/lib/cn";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
 
 function SettingsRow({
   icon,
@@ -99,7 +100,7 @@ function SettingsRow({
 export default function SettingsPage() {
   const reduceMotion = useReducedMotion();
   const { theme, setTheme } = useTheme();
-  const { logout } = usePrivy();
+  const { ready, authenticated, login, logout } = usePrivy();
   const { notify } = useToast();
   const { unreadCount, markAllAsRead } = useNotifications();
   const [marking, setMarking] = useState(false);
@@ -129,6 +130,16 @@ export default function SettingsPage() {
     }
   };
 
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8">
+          <div className="h-10 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pt-8">
@@ -142,6 +153,17 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-8"
       >
+        {!authenticated ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-center dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Sign in to sync notifications and sign out on this device.
+            </p>
+            <Button className="mt-3" size="sm" onClick={() => login()}>
+              Sign in
+            </Button>
+          </div>
+        ) : null}
+
         <section className="space-y-3">
           <h2 className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400 px-1">
             Theme
@@ -203,12 +225,16 @@ export default function SettingsPage() {
               icon={<Bell size={18} className="stroke-[2.5]" />}
               title="Mark all as read"
               description={
-                unreadCount > 0
-                  ? `${unreadCount} unread in your inbox`
-                  : "No unread notifications"
+                !authenticated
+                  ? "Sign in to manage notifications"
+                  : unreadCount > 0
+                    ? `${unreadCount} unread in your inbox`
+                    : "No unread notifications"
               }
               onClick={onMarkAllRead}
-              disabled={marking || unreadCount === 0}
+              disabled={
+                !authenticated || marking || unreadCount === 0
+              }
               trailing={
                 marking ? (
                   <Loader2 className="h-5 w-5 animate-spin text-violet-600 shrink-0 stroke-[2.5]" />
@@ -218,19 +244,21 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <h2 className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400 px-1">
-            Session
-          </h2>
-          <SettingsRow
-            icon={<LogOut size={18} className="stroke-[2.5]" />}
-            title="Sign out"
-            description="Sign out of SplitFare on this device"
-            onClick={() => logout()}
-            destructive
-            trailing={<ChevronRight className="h-5 w-5 shrink-0 text-rose-500/40 stroke-[2.5]" />}
-          />
-        </section>
+        {authenticated ? (
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400 px-1">
+              Session
+            </h2>
+            <SettingsRow
+              icon={<LogOut size={18} className="stroke-[2.5]" />}
+              title="Sign out"
+              description="Sign out of SplitFare on this device"
+              onClick={() => logout()}
+                  destructive
+              trailing={<ChevronRight className="h-5 w-5 shrink-0 text-rose-500/40 stroke-[2.5]" />}
+            />
+          </section>
+        ) : null}
 
         <p className="text-center text-[11px] font-medium text-slate-500 dark:text-slate-400 pt-4">
           SplitFare ·{" "}
