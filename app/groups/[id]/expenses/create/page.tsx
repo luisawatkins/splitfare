@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toDbUserId } from "@/lib/privy-utils";
 import { usePrivy } from "@privy-io/react-auth";
+import { calculateEqualSplit, calculatePercentageSplit, calculateSharesSplit, validateExactSplit } from "@/lib/splits";
 
 const steps = [
   { id: "basic", title: "Basic Info" },
@@ -98,15 +99,40 @@ export default function CreateExpensePage() {
       triggerHaptic();
 
       const token = await getAccessToken();
-      
-      const splits = data.members
-        .filter(m => m.involved)
-        .map(m => ({
-          userId: m.userId,
-          amount: m.amount || 0,
-          percentage: m.percentage,
-          shares: m.shares,
-        }));
+
+      const involvedMembers = data.members.filter((m) => m.involved);
+      let computedSplits: Array<{ userId: string; amount: number }> = [];
+
+      if (data.splitType === "EQUAL") {
+        computedSplits = calculateEqualSplit(data.amount, involvedMembers.map((m) => m.userId));
+      } else if (data.splitType === "EXACT") {
+        const exact = involvedMembers.map((m) => ({ userId: m.userId, amount: m.amount || 0 }));
+        if (!validateExactSplit(data.amount, exact)) {
+          throw new Error("Exact split amounts must sum to total amount");
+        }
+        computedSplits = exact;
+      } else if (data.splitType === "PERCENTAGE") {
+        computedSplits = calculatePercentageSplit(
+          data.amount,
+          involvedMembers.map((m) => ({ userId: m.userId, percentage: m.percentage || 0 }))
+        );
+      } else if (data.splitType === "SHARES") {
+        computedSplits = calculateSharesSplit(
+          data.amount,
+          involvedMembers.map((m) => ({ userId: m.userId, shares: m.shares || 0 }))
+        );
+        if (computedSplits.length === 0) {
+          throw new Error("Shares split requires at least one positive share");
+        }
+      }
+
+      const amountByUserId = new Map(computedSplits.map((s) => [s.userId, s.amount]));
+      const splits = involvedMembers.map((m) => ({
+        userId: m.userId,
+        amount: amountByUserId.get(m.userId) || 0,
+        percentage: m.percentage,
+        shares: m.shares,
+      }));
 
       const res = await fetch(`/api/groups/${groupId}/expenses`, {
         method: "POST",

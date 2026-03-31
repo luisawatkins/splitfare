@@ -4,6 +4,7 @@ import { toDbUserId } from '@/lib/privy-utils';
 import { CreateExpenseApiSchema, ExpenseFilterSchema } from '@/lib/validations/expense';
 import { ForbiddenError, AppError } from '@/lib/errors';
 import { notificationService } from '@/services/notification';
+import { calculateEqualSplit, calculatePercentageSplit, calculateSharesSplit, validateExactSplit } from '@/lib/splits';
 
 
 const listExpenses = async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
@@ -153,11 +154,43 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       return createResponse({ error: 'Access denied' }, 403);
     }
 
+    // Normalize IDs: clients may send either users.id or group_members.id.
+    // Convert everything to canonical users.id before writing expense/split rows.
+    const rawIds = [body.paidById, ...body.splits.map((s: any) => s.userId)];
+    const uniqueIds = Array.from(new Set(rawIds.filter(Boolean)));
+
+    const { data: memberMappings, error: memberMappingsError } = await supabaseAdmin
+      .from('group_members')
+      .select('id, user_id')
+      .eq('group_id', groupId)
+      .or(`id.in.(${uniqueIds.join(',')}),user_id.in.(${uniqueIds.join(',')})`);
+
+    if (memberMappingsError) {
+      console.error('Error resolving member mappings:', memberMappingsError);
+      return createResponse({ error: 'Failed to validate expense members' }, 400);
+    }
+
+    const idToUserId = new Map<string, string>();
+    for (const row of memberMappings || []) {
+      idToUserId.set(row.id, row.user_id);
+      idToUserId.set(row.user_id, row.user_id);
+    }
+
+    const normalizedPaidById = idToUserId.get(body.paidById);
+    const normalizedSplits = body.splits.map((split: any) => ({
+      ...split,
+      userId: idToUserId.get(split.userId),
+    }));
+
+    if (!normalizedPaidById || normalizedSplits.some((s: any) => !s.userId)) {
+      return createResponse({ error: 'One or more selected members are invalid for this group' }, 400);
+    }
+
     const { data: expense, error: expenseError } = await supabaseAdmin
       .from('expenses')
       .insert({
         group_id: groupId,
-        created_by: body.paidById,
+        created_by: normalizedPaidById,
         description: body.description,
         total_amount: body.amount,
         category: body.category,
@@ -172,10 +205,46 @@ const createExpense = async (req: AuthenticatedRequest & { validatedBody: any },
       return createResponse({ error: 'Failed to create expense' }, 400);
     }
 
-    const splitsToInsert = body.splits.map((split: any) => ({
+    let computedAmountByUserId = new Map<string, number>();
+    try {
+      if (body.splitType === 'EQUAL') {
+        const computed = calculateEqualSplit(body.amount, normalizedSplits.map((s: any) => s.userId));
+        computedAmountByUserId = new Map(computed.map((s) => [s.userId, s.amount]));
+      } else if (body.splitType === 'EXACT') {
+        const exactSplits: Array<{ userId: string; amount: number }> = normalizedSplits.map((s: any) => ({
+          userId: s.userId,
+          amount: Number(s.amount || 0),
+        }));
+        if (!validateExactSplit(body.amount, exactSplits)) {
+          return createResponse({ error: 'Exact split amounts must sum to the total amount' }, 400);
+        }
+        computedAmountByUserId = new Map(exactSplits.map((s) => [s.userId, s.amount]));
+      } else if (body.splitType === 'PERCENTAGE') {
+        const computed = calculatePercentageSplit(
+          body.amount,
+          normalizedSplits.map((s: any) => ({ userId: s.userId, percentage: Number(s.percentage || 0) }))
+        );
+        computedAmountByUserId = new Map(computed.map((s) => [s.userId, s.amount]));
+      } else if (body.splitType === 'SHARES') {
+        const computed = calculateSharesSplit(
+          body.amount,
+          normalizedSplits.map((s: any) => ({ userId: s.userId, shares: Number(s.shares || 0) }))
+        );
+        if (computed.length === 0) {
+          return createResponse({ error: 'Shares split requires at least one positive share' }, 400);
+        }
+        computedAmountByUserId = new Map(computed.map((s) => [s.userId, s.amount]));
+      } else {
+        return createResponse({ error: 'Invalid split type' }, 400);
+      }
+    } catch (splitError: any) {
+      return createResponse({ error: splitError?.message || 'Invalid split configuration' }, 400);
+    }
+
+    const splitsToInsert = normalizedSplits.map((split: any) => ({
       expense_id: expense.id,
       user_id: split.userId,
-      amount_owed: split.amount,
+      amount_owed: computedAmountByUserId.get(split.userId) ?? 0,
       percentage_owed: split.percentage,
       shares: split.shares,
     }));
